@@ -70,7 +70,7 @@ type Payload = {
     maxInstallments: number; paymentMode: "one_time" | "subscription";
     installmentInterestRate?: number;
     installmentDisplayCents?: number;
-    seo?: { title?: string; description?: string };
+  seo?: { title?: string; description?: string; ogImage?: string };
     template?: "classic" | "long_form" | "immersion";
     theme?: {
       colorSource?: "brand" | "custom";
