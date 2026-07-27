@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { User, UserStatus } from '../../entities/user.entity';
 import { TestTemplate } from '../../entities/test-template.entity';
 import { Lead } from '../../entities/lead.entity';
+import { SalesPage } from '../../entities/sales-page.entity';
 import { LeadsService } from '../leads/leads.service';
 import { TestsService } from '../tests/tests.service';
 import { ApiTags } from '@nestjs/swagger';
@@ -18,6 +19,7 @@ export class PublicController {
     @InjectRepository(User) private users: Repository<User>,
     @InjectRepository(TestTemplate) private templates: Repository<TestTemplate>,
     @InjectRepository(Lead) private leads: Repository<Lead>,
+    @InjectRepository(SalesPage) private salesPages: Repository<SalesPage>,
     private leadsService: LeadsService,
     private testsService: TestsService,
   ) {}
