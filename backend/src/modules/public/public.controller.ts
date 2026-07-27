@@ -287,6 +287,81 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
     res.send(html);
   }
 
+  /**
+   * Compartilhamento por página de vendas — meta tags OG/Twitter específicas
+   * da página (thumb, título e descrição). Crawlers leem as tags; humanos
+   * são redirecionados para /p/:mentorSlug/:pageSlug.
+   */
+  @Get('share/sales/:mentorSlug/:pageSlug')
+  async shareSalesPage(
+    @Param('mentorSlug') mentorSlug: string,
+    @Param('pageSlug') pageSlug: string,
+    @Res() res: Response,
+  ) {
+    const m = await this.users.findOne({ where: { slug: mentorSlug, status: UserStatus.ACTIVE } });
+    if (!m) { res.status(404).send('Mentor não encontrado'); return; }
+    const page = await this.salesPages.findOne({ where: { mentorId: m.id, slug: pageSlug } });
+    if (!page) { res.status(404).send('Página não encontrada'); return; }
+
+    const baseUrl = m.customDomain
+      ? `https://${m.customDomain}`
+      : (process.env.APP_URL || 'https://app.gleego.com.br').replace(/\/$/, '');
+    const target = `${baseUrl}/p/${mentorSlug}/${pageSlug}`;
+
+    const title = page.seo?.title || page.title || m.brandName || 'Mentor Glee-go';
+    const description =
+      page.seo?.description ||
+      page.subheadline ||
+      page.headline ||
+      `${page.title} — ${m.brandName || m.name}`;
+    const image =
+      page.seo?.ogImage ||
+      page.heroImageUrl ||
+      m.brandOgImageUrl ||
+      m.brandBannerUrl ||
+      m.brandLogoUrl ||
+      '';
+
+    const esc = (s: string) =>
+      String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+    const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(description)}" />
+<link rel="canonical" href="${esc(target)}" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="${esc(m.brandName || title)}" />
+<meta property="og:title" content="${esc(title)}" />
+<meta property="og:description" content="${esc(description)}" />
+<meta property="og:url" content="${esc(target)}" />
+${image ? `<meta property="og:image" content="${esc(image)}" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />` : ''}
+<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}" />
+<meta name="twitter:title" content="${esc(title)}" />
+<meta name="twitter:description" content="${esc(description)}" />
+${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
+<meta http-equiv="refresh" content="0;url=${esc(target)}" />
+<script>window.location.replace(${JSON.stringify(target)});</script>
+</head>
+<body style="font-family:system-ui;background:#0b0b0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+<p>Abrindo <a style="color:#fff" href="${esc(target)}">${esc(title)}</a>…</p>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.send(html);
+  }
+
   @Get('mentor/:slug/qrcode')
   async getQrCode(@Param('slug') slug: string) {
     const m = await this.users.findOne({ where: { slug, status: UserStatus.ACTIVE } });
