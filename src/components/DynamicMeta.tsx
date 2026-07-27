@@ -15,8 +15,8 @@ export function DynamicMeta() {
     if (!brand) return;
 
     const brandName = brand.brandName || "Mentoria";
-    const description = `Portal do mentorado ${brandName}. Acesse seus conteúdos, cursos e testes.`;
-    const logoUrl = brand.brandLogoUrl || "/placeholder.svg";
+    const description = brand.brandOgDescription || `Portal do mentorado ${brandName}. Acesse seus conteúdos, cursos e testes.`;
+    const previewImageUrl = brand.brandOgImageUrl || brand.brandBannerUrl || brand.brandLogoUrl || "/placeholder.svg";
 
     // Update Title
     document.title = brandName;
@@ -35,12 +35,13 @@ export function DynamicMeta() {
     updateMeta("description", description);
     updateMeta("og:title", brandName, "property");
     updateMeta("og:description", description, "property");
-    updateMeta("og:image", logoUrl, "property");
-    updateMeta("og:image:width", "512", "property");
-    updateMeta("og:image:height", "512", "property");
+    updateMeta("og:image", previewImageUrl, "property");
+    updateMeta("og:image:secure_url", previewImageUrl, "property");
+    updateMeta("og:image:width", "1200", "property");
+    updateMeta("og:image:height", "630", "property");
     updateMeta("twitter:title", brandName);
     updateMeta("twitter:description", description);
-    updateMeta("twitter:image", logoUrl);
+    updateMeta("twitter:image", previewImageUrl);
 
     // Update Favicon
     if (brand.brandLogoUrl) {

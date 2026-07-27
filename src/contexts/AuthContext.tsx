@@ -21,6 +21,9 @@ export interface SessionUser {
   brandHighlightTheme?: string;
   brandDarkBannerUrl?: string;
   brandDarkLogoUrl?: string;
+  brandOgImageUrl?: string;
+  brandOgDescription?: string;
+  customDomain?: string;
   onboardingCompleted?: boolean;
   mentorId?: string;
   parentMentorId?: string;
@@ -172,6 +175,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
          brandHighlightTheme: u.brandHighlightTheme,
          brandDarkBannerUrl: u.brandDarkBannerUrl,
          brandDarkLogoUrl: u.brandDarkLogoUrl,
+          brandOgImageUrl: u.brandOgImageUrl,
+          brandOgDescription: u.brandOgDescription,
+          customDomain: u.customDomain,
          onboardingCompleted: u.onboardingCompleted,
          mentorId: u.mentorId,
          parentMentorId: u.parentMentorId,
@@ -201,6 +207,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
                  brandHighlightTheme: mentorData.brandHighlightTheme,
                  brandDarkBannerUrl: mentorData.brandDarkBannerUrl,
                  brandDarkLogoUrl: mentorData.brandDarkLogoUrl,
+                  brandOgImageUrl: mentorData.brandOgImageUrl,
+                  brandOgDescription: mentorData.brandOgDescription,
                 customDomain: mentorData.customDomain
               } as SessionUser;
               setStaffMentor(mentorInfo);
