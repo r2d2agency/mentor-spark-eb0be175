@@ -1000,10 +1000,9 @@ export default function SalesPageEditorPage() {
               <Label>Thumb (imagem de preview)</Label>
               <ImageUploadField
                 value={page.seo?.ogImage || ""}
-                onChange={(m) => patch({ seo: { ...(page.seo || {}), ogImage: m?.url || "" } })}
-                accept="image/*"
-                label="Enviar thumb"
-                compact={!!page.seo?.ogImage}
+                onChange={(url) => patch({ seo: { ...(page.seo || {}), ogImage: url || "" } })}
+                label="Thumb (1200×630 recomendado)"
+                aspect="16/9"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Se nada for enviado, usamos a imagem hero desta página como fallback.
