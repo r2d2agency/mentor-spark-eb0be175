@@ -986,6 +986,75 @@ export default function SalesPageEditorPage() {
               <Input value={page.guaranteeText || ""} onChange={(e) => patch({ guaranteeText: e.target.value })} placeholder="Garantia incondicional de 7 dias" />
             </div>
           </Card>
+
+          {/* ===== Compartilhamento (thumb do WhatsApp/redes) ===== */}
+          <Card className="p-4 space-y-4">
+            <div>
+              <h3 className="font-semibold">Compartilhamento (WhatsApp / redes sociais)</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Imagem, título e descrição que aparecem quando o link desta página é colado no WhatsApp, Instagram, Facebook, LinkedIn etc.
+                Use uma imagem 1200×630px para melhor resultado.
+              </p>
+            </div>
+            <div>
+              <Label>Thumb (imagem de preview)</Label>
+              <ImageUploadField
+                value={page.seo?.ogImage || ""}
+                onChange={(m) => patch({ seo: { ...(page.seo || {}), ogImage: m?.url || "" } })}
+                accept="image/*"
+                label="Enviar thumb"
+                compact={!!page.seo?.ogImage}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Se nada for enviado, usamos a imagem hero desta página como fallback.
+              </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <Label>Título para compartilhamento</Label>
+                <Input
+                  value={page.seo?.title || ""}
+                  onChange={(e) => patch({ seo: { ...(page.seo || {}), title: e.target.value } })}
+                  placeholder={page.title}
+                  maxLength={70}
+                />
+              </div>
+              <div>
+                <Label>Descrição para compartilhamento</Label>
+                <Input
+                  value={page.seo?.description || ""}
+                  onChange={(e) => patch({ seo: { ...(page.seo || {}), description: e.target.value } })}
+                  placeholder={page.subheadline || page.headline || "Uma frase curta que aparece embaixo do título"}
+                  maxLength={165}
+                />
+              </div>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Link para compartilhar</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={`${window.location.origin.replace(/\/$/, '')}/api/public/share/sales/${user?.slug || 'seu-slug'}/${page.slug}`}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const url = `${window.location.origin.replace(/\/$/, '')}/api/public/share/sales/${user?.slug || 'seu-slug'}/${page.slug}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success("Link de compartilhamento copiado");
+                  }}
+                >
+                  <Copy className="h-3 w-3 mr-1" /> Copiar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Use este link ao compartilhar no WhatsApp / redes: ele entrega a thumb correta ao crawler e redireciona a pessoa para a página. Salve as alterações antes de compartilhar.
+              </p>
+            </div>
+          </Card>
         </TabsContent>
 
         {/* ===== Oferta ===== */}
