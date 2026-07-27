@@ -292,6 +292,34 @@ export default function SalesPagePublic() {
       meta.setAttribute("content", data.page.seo.description);
       if (!meta.parentNode) document.head.appendChild(meta);
     }
+    // Thumb OG/Twitter específica da página (fallback: hero → mentor).
+    const ogImage =
+      data?.page?.seo?.ogImage ||
+      data?.page?.heroImageUrl ||
+      "";
+    const setMeta = (key: string, val: string, attr: "name" | "property" = "property") => {
+      if (!val) return;
+      let el = document.querySelector(`meta[${attr}="${key}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", val);
+    };
+    if (ogImage) {
+      setMeta("og:image", ogImage);
+      setMeta("twitter:image", ogImage, "name");
+      setMeta("twitter:card", "summary_large_image", "name");
+    }
+    if (data?.page?.seo?.title || data?.page?.title) {
+      setMeta("og:title", data.page.seo?.title || data.page.title);
+      setMeta("twitter:title", data.page.seo?.title || data.page.title, "name");
+    }
+    if (data?.page?.seo?.description) {
+      setMeta("og:description", data.page.seo.description);
+      setMeta("twitter:description", data.page.seo.description, "name");
+    }
   }, [data]);
 
   if (err) {
