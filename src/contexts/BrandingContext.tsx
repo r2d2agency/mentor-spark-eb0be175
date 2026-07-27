@@ -14,6 +14,8 @@ export interface TenantBrand {
   brandHighlightTheme?: string;
   brandDarkBannerUrl?: string;
   brandDarkLogoUrl?: string;
+  brandOgImageUrl?: string;
+  brandOgDescription?: string;
   brandCoursesLayout?: "netflix" | "grid" | "neon" | "cinema" | string;
 }
 
