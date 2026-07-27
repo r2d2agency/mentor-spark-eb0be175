@@ -1,6 +1,6 @@
-import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Post, Query, Req } from '@nestjs/common';
 import { Res } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, UserStatus } from '../../entities/user.entity';
@@ -66,13 +66,7 @@ export class PublicController {
     return Array.from(candidates);
   }
 
-  /** Resolve tenant pelo host (subdomínio ou domínio próprio).
-   *  Ex.: joao.mentorflow.com → mentor com slug=joao
-   *       app.cliente.com    → mentor com customDomain='app.cliente.com'
-   */
-  @Get('tenant-by-host')
-  async tenantByHost(@Query('host') host?: string) {
-    if (!host) return null;
+  private async resolveMentorByHost(host: string) {
     const h = this.normalizeHost(host);
     const domainCandidates = this.hostCandidates(h);
 
@@ -91,12 +85,12 @@ export class PublicController {
       const parts = h.split('.');
       const sub = parts[0];
       const ignore = new Set(['www', 'app', 'portal', 'mentor', 'localhost', '']);
-      
+
       // Se tiver mais de 2 partes e a primeira for um slug válido (não ignorado)
       if (parts.length >= 2 && !ignore.has(sub)) {
         mentor = await this.users.findOne({ where: { slug: sub, status: UserStatus.ACTIVE } });
       }
-      
+
       // Se ainda não achou e tem 3+ partes (ex: app.slug.com.br), tenta a segunda parte
       if (!mentor && parts.length >= 3 && ignore.has(sub)) {
         const potentialSlug = parts[1];
@@ -142,6 +136,82 @@ export class PublicController {
         }
       }
     }
+
+    return mentor || null;
+  }
+
+  private publicBaseFor(req?: Request, mentor?: User | null, hostOverride?: string | null) {
+    const host = this.normalizeHost(hostOverride || req?.headers.host || mentor?.customDomain || '');
+    if (host && host !== 'localhost') return `https://${host}`;
+    if (mentor?.customDomain) return `https://${this.normalizeHost(mentor.customDomain)}`;
+    return (process.env.PUBLIC_APP_URL || process.env.APP_URL || 'https://app.gleego.com.br').replace(/\/$/, '');
+  }
+
+  private absoluteUrl(value: string | undefined | null, baseUrl: string) {
+    if (!value) return '';
+    const url = String(value).trim();
+    if (/^https?:\/\//i.test(url)) return url;
+    if (url.startsWith('//')) return `https:${url}`;
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+
+  private escapeHtml(s: string) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  private sendShareHtml(
+    res: Response,
+    payload: { title: string; description: string; image?: string; target: string; siteName?: string },
+  ) {
+    const esc = (s: string) => this.escapeHtml(s);
+    const image = payload.image || '';
+    const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(payload.title)}</title>
+<meta name="description" content="${esc(payload.description)}" />
+<link rel="canonical" href="${esc(payload.target)}" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="${esc(payload.siteName || payload.title)}" />
+<meta property="og:title" content="${esc(payload.title)}" />
+<meta property="og:description" content="${esc(payload.description)}" />
+<meta property="og:url" content="${esc(payload.target)}" />
+${image ? `<meta property="og:image" content="${esc(image)}" />
+<meta property="og:image:secure_url" content="${esc(image)}" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />` : ''}
+<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}" />
+<meta name="twitter:title" content="${esc(payload.title)}" />
+<meta name="twitter:description" content="${esc(payload.description)}" />
+${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
+<meta http-equiv="refresh" content="0;url=${esc(payload.target)}" />
+<script>window.location.replace(${JSON.stringify(payload.target)});</script>
+</head>
+<body style="font-family:system-ui;background:#0b0b0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+<p>Abrindo <a style="color:#fff" href="${esc(payload.target)}">${esc(payload.title)}</a>…</p>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    // Preview social costuma cachear; mantemos baixo para novas thumbs aparecerem mais rápido em testes.
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60');
+    res.send(html);
+  }
+
+  /** Resolve tenant pelo host (subdomínio ou domínio próprio).
+   *  Ex.: joao.mentorflow.com → mentor com slug=joao
+   *       app.cliente.com    → mentor com customDomain='app.cliente.com'
+   */
+  @Get('tenant-by-host')
+  async tenantByHost(@Query('host') host?: string) {
+    if (!host) return null;
+    const mentor = await this.resolveMentorByHost(host);
 
     if (!mentor) {
       return null;
@@ -226,6 +296,7 @@ export class PublicController {
   async shareMentor(
     @Param('slug') slug: string,
     @Query('to') to: string | undefined,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     const m = await this.users.findOne({ where: { slug, status: UserStatus.ACTIVE } });
@@ -234,9 +305,7 @@ export class PublicController {
       return;
     }
 
-    const baseUrl = m.customDomain
-      ? `https://${m.customDomain}`
-      : (process.env.APP_URL || 'https://app.gleego.com.br').replace(/\/$/, '');
+    const baseUrl = this.publicBaseFor(req, m);
 
     const safeTo = to && /^\/[a-zA-Z0-9\-_/?&=%.]*$/.test(to) ? to : `/c/${slug}`;
     const target = `${baseUrl}${safeTo}`;
@@ -245,46 +314,81 @@ export class PublicController {
     const description =
       m.brandOgDescription ||
       `Área exclusiva de mentoria de ${m.brandName || m.name}. Acesse cursos, conteúdos e acompanhamento.`;
-    const image = m.brandOgImageUrl || m.brandBannerUrl || m.brandLogoUrl || '';
+    const image = this.absoluteUrl(m.brandOgImageUrl || m.brandBannerUrl || m.brandLogoUrl || '', baseUrl);
 
-    const esc = (s: string) =>
-      String(s || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    this.sendShareHtml(res, { title, description, image, target, siteName: title });
+  }
 
-    const html = `<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${esc(title)}</title>
-<meta name="description" content="${esc(description)}" />
-<link rel="canonical" href="${esc(target)}" />
-<meta property="og:type" content="website" />
-<meta property="og:site_name" content="${esc(title)}" />
-<meta property="og:title" content="${esc(title)}" />
-<meta property="og:description" content="${esc(description)}" />
-<meta property="og:url" content="${esc(target)}" />
-${image ? `<meta property="og:image" content="${esc(image)}" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />` : ''}
-<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}" />
-<meta name="twitter:title" content="${esc(title)}" />
-<meta name="twitter:description" content="${esc(description)}" />
-${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
-<meta http-equiv="refresh" content="0;url=${esc(target)}" />
-<script>window.location.replace(${JSON.stringify(target)});</script>
-</head>
-<body style="font-family:system-ui;background:#0b0b0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-<p>Redirecionando para <a style="color:#fff" href="${esc(target)}">${esc(title)}</a>…</p>
-</body>
-</html>`;
+  /**
+   * Preview dinâmico por host/path. Usado pelo Nginx para WhatsApp e outros crawlers
+   * quando o usuário cola o link normal (/ ou /p/mentor/pagina), sem precisar usar /api/public/share/...
+   */
+  @Get('share/resolve')
+  async shareByHost(
+    @Query('host') host: string | undefined,
+    @Query('path') path: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const requestHost = this.normalizeHost(host || req.headers.host || '');
+    const cleanPath = path && path.startsWith('/') ? path : '/';
+    const mentorFromHost = requestHost ? await this.resolveMentorByHost(requestHost) : null;
 
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=300');
-    res.send(html);
+    const salesMatch = cleanPath.match(/^\/p\/([^/?#]+)\/([^/?#]+)/);
+    if (salesMatch) {
+      const [, mentorSlug, pageSlug] = salesMatch;
+      const mentor =
+        (mentorFromHost && (!mentorFromHost.slug || mentorFromHost.slug === mentorSlug) ? mentorFromHost : null) ||
+        (await this.users.findOne({ where: { slug: mentorSlug, status: UserStatus.ACTIVE } }));
+      if (mentor) {
+        const page = await this.salesPages.findOne({ where: { mentorId: mentor.id, slug: pageSlug } });
+        if (page) {
+          const baseUrl = this.publicBaseFor(req, mentor, requestHost);
+          const target = `${baseUrl}${cleanPath}`;
+          const title = page.seo?.title || page.title || mentor.brandName || mentor.name || 'Mentor Glee-go';
+          const description =
+            page.seo?.description ||
+            page.subheadline ||
+            page.headline ||
+            `${page.title} — ${mentor.brandName || mentor.name}`;
+          const image = this.absoluteUrl(
+            page.seo?.ogImage || page.heroImageUrl || mentor.brandOgImageUrl || mentor.brandBannerUrl || mentor.brandLogoUrl || '',
+            baseUrl,
+          );
+          this.sendShareHtml(res, {
+            title,
+            description,
+            image,
+            target,
+            siteName: mentor.brandName || mentor.name || title,
+          });
+          return;
+        }
+      }
+    }
+
+    const baseUrl = this.publicBaseFor(req, mentorFromHost, requestHost);
+    const target = `${baseUrl}${cleanPath}`;
+    if (mentorFromHost) {
+      const title = mentorFromHost.brandName || mentorFromHost.name || 'Mentor Glee-go';
+      const description =
+        mentorFromHost.brandOgDescription ||
+        `Área exclusiva de mentoria de ${mentorFromHost.brandName || mentorFromHost.name}. Acesse cursos, conteúdos e acompanhamento.`;
+      const image = this.absoluteUrl(
+        mentorFromHost.brandOgImageUrl || mentorFromHost.brandBannerUrl || mentorFromHost.brandLogoUrl || '',
+        baseUrl,
+      );
+      this.sendShareHtml(res, { title, description, image, target, siteName: title });
+      return;
+    }
+
+    this.sendShareHtml(res, {
+      title: 'Mentor Glee-go',
+      description: 'Plataforma completa de mentoria — gerencie mentorados, cursos, agenda, pagamentos e comunicação em um só lugar.',
+      image: this.absoluteUrl('/og-image.jpg', baseUrl),
+      target,
+      siteName: 'Mentor Glee-go',
+    });
   }
 
   /**
@@ -296,6 +400,7 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
   async shareSalesPage(
     @Param('mentorSlug') mentorSlug: string,
     @Param('pageSlug') pageSlug: string,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     const m = await this.users.findOne({ where: { slug: mentorSlug, status: UserStatus.ACTIVE } });
@@ -303,9 +408,7 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
     const page = await this.salesPages.findOne({ where: { mentorId: m.id, slug: pageSlug } });
     if (!page) { res.status(404).send('Página não encontrada'); return; }
 
-    const baseUrl = m.customDomain
-      ? `https://${m.customDomain}`
-      : (process.env.APP_URL || 'https://app.gleego.com.br').replace(/\/$/, '');
+    const baseUrl = this.publicBaseFor(req, m);
     const target = `${baseUrl}/p/${mentorSlug}/${pageSlug}`;
 
     const title = page.seo?.title || page.title || m.brandName || 'Mentor Glee-go';
@@ -314,52 +417,17 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
       page.subheadline ||
       page.headline ||
       `${page.title} — ${m.brandName || m.name}`;
-    const image =
+    const image = this.absoluteUrl(
       page.seo?.ogImage ||
       page.heroImageUrl ||
       m.brandOgImageUrl ||
       m.brandBannerUrl ||
       m.brandLogoUrl ||
-      '';
+      '',
+      baseUrl,
+    );
 
-    const esc = (s: string) =>
-      String(s || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-
-    const html = `<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${esc(title)}</title>
-<meta name="description" content="${esc(description)}" />
-<link rel="canonical" href="${esc(target)}" />
-<meta property="og:type" content="website" />
-<meta property="og:site_name" content="${esc(m.brandName || title)}" />
-<meta property="og:title" content="${esc(title)}" />
-<meta property="og:description" content="${esc(description)}" />
-<meta property="og:url" content="${esc(target)}" />
-${image ? `<meta property="og:image" content="${esc(image)}" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />` : ''}
-<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}" />
-<meta name="twitter:title" content="${esc(title)}" />
-<meta name="twitter:description" content="${esc(description)}" />
-${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
-<meta http-equiv="refresh" content="0;url=${esc(target)}" />
-<script>window.location.replace(${JSON.stringify(target)});</script>
-</head>
-<body style="font-family:system-ui;background:#0b0b0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-<p>Abrindo <a style="color:#fff" href="${esc(target)}">${esc(title)}</a>…</p>
-</body>
-</html>`;
-
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=300');
-    res.send(html);
+    this.sendShareHtml(res, { title, description, image, target, siteName: m.brandName || m.name || title });
   }
 
   @Get('mentor/:slug/qrcode')
