@@ -141,7 +141,10 @@ export class PublicController {
   }
 
   private publicBaseFor(req?: Request, mentor?: User | null, hostOverride?: string | null) {
-    const host = this.normalizeHost(hostOverride || req?.headers.host || mentor?.customDomain || '');
+    const forwardedHost = Array.isArray(req?.headers['x-forwarded-host'])
+      ? req?.headers['x-forwarded-host'][0]
+      : req?.headers['x-forwarded-host'];
+    const host = this.normalizeHost(hostOverride || forwardedHost || req?.headers.host || mentor?.customDomain || '');
     if (host && host !== 'localhost') return `https://${host}`;
     if (mentor?.customDomain) return `https://${this.normalizeHost(mentor.customDomain)}`;
     return (process.env.PUBLIC_APP_URL || process.env.APP_URL || 'https://app.gleego.com.br').replace(/\/$/, '');
