@@ -234,7 +234,6 @@ ${image ? `<meta property="og:image" content="${esc(image)}" />
 <meta name="twitter:title" content="${esc(payload.title)}" />
 <meta name="twitter:description" content="${esc(payload.description)}" />
 ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
-<meta http-equiv="refresh" content="0;url=${esc(payload.target)}" />
 <script>window.location.replace(${JSON.stringify(payload.target)});</script>
 </head>
 <body style="font-family:system-ui;background:#0b0b0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
