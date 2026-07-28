@@ -96,6 +96,9 @@ type SalesPage = {
   heroImageUrl?: string;
   videoUrl?: string;
   features: Feature[];
+  featuresEyebrow?: string;
+  featuresTitle?: string;
+  featuresItemLabel?: string;
   faqs: Faq[];
   testimonials: Testimonial[];
   badges: string[];
