@@ -358,7 +358,7 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
     const description =
       m.brandOgDescription ||
       `Área exclusiva de mentoria de ${m.brandName || m.name}. Acesse cursos, conteúdos e acompanhamento.`;
-    const image = this.absoluteUrl(m.brandOgImageUrl || m.brandBannerUrl || m.brandLogoUrl || '', baseUrl);
+    const image = this.publicImageUrl(m.brandOgImageUrl || m.brandBannerUrl || m.brandLogoUrl || '', baseUrl);
 
     this.sendShareHtml(res, { title, description, image, target, siteName: title });
   }
