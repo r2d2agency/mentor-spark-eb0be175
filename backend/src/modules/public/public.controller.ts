@@ -158,6 +158,44 @@ export class PublicController {
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   }
 
+  private publicImageUrl(value: string | undefined | null, baseUrl: string) {
+    if (!value) return '';
+    const raw = String(value).trim();
+    if (!raw || /^(data|blob):/i.test(raw)) return '';
+
+    const publicBase = baseUrl.replace(/\/$/, '');
+    const backendHost = this.normalizeHost(process.env.BACKEND_PUBLIC_HOST || 'blaster-mentorflor-backend.isyhhh.easypanel.host');
+
+    try {
+      const parsed = raw.startsWith('//') ? new URL(`https:${raw}`) : new URL(raw, publicBase);
+      const pathWithQuery = `${parsed.pathname}${parsed.search}`;
+
+      // Imagens enviadas pelo painel podem ter sido salvas com a URL direta do backend.
+      // Para WhatsApp/crawlers, preferimos sempre o domínio público da página.
+      if (parsed.pathname.startsWith('/uploads/') || parsed.pathname.startsWith('/__l5e/')) {
+        return `${publicBase}${pathWithQuery}`;
+      }
+
+      if (backendHost && this.normalizeHost(parsed.host) === backendHost) {
+        return `${publicBase}${pathWithQuery}`;
+      }
+
+      if (/^https:\/\//i.test(parsed.href)) return parsed.href;
+
+      return `${publicBase}${pathWithQuery}`;
+    } catch {
+      return this.absoluteUrl(raw, publicBase);
+    }
+  }
+
+  private imageMimeType(image: string) {
+    const clean = image.split('?')[0].toLowerCase();
+    if (clean.endsWith('.png')) return 'image/png';
+    if (clean.endsWith('.webp')) return 'image/webp';
+    if (clean.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
+  }
+
   private escapeHtml(s: string) {
     return String(s || '')
       .replace(/&/g, '&amp;')
@@ -172,6 +210,7 @@ export class PublicController {
   ) {
     const esc = (s: string) => this.escapeHtml(s);
     const image = payload.image || '';
+    const imageType = image ? this.imageMimeType(image) : '';
     const html = `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -187,13 +226,14 @@ export class PublicController {
 <meta property="og:url" content="${esc(payload.target)}" />
 ${image ? `<meta property="og:image" content="${esc(image)}" />
 <meta property="og:image:secure_url" content="${esc(image)}" />
+<meta property="og:image:url" content="${esc(image)}" />
+<meta property="og:image:type" content="${esc(imageType)}" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />` : ''}
 <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}" />
 <meta name="twitter:title" content="${esc(payload.title)}" />
 <meta name="twitter:description" content="${esc(payload.description)}" />
 ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
-<meta http-equiv="refresh" content="0;url=${esc(payload.target)}" />
 <script>window.location.replace(${JSON.stringify(payload.target)});</script>
 </head>
 <body style="font-family:system-ui;background:#0b0b0f;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
@@ -317,7 +357,7 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
     const description =
       m.brandOgDescription ||
       `Área exclusiva de mentoria de ${m.brandName || m.name}. Acesse cursos, conteúdos e acompanhamento.`;
-    const image = this.absoluteUrl(m.brandOgImageUrl || m.brandBannerUrl || m.brandLogoUrl || '', baseUrl);
+    const image = this.publicImageUrl(m.brandOgImageUrl || m.brandBannerUrl || m.brandLogoUrl || '', baseUrl);
 
     this.sendShareHtml(res, { title, description, image, target, siteName: title });
   }
@@ -354,7 +394,7 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
             page.subheadline ||
             page.headline ||
             `${page.title} — ${mentor.brandName || mentor.name}`;
-          const image = this.absoluteUrl(
+          const image = this.publicImageUrl(
             page.seo?.ogImage || page.heroImageUrl || mentor.brandOgImageUrl || mentor.brandBannerUrl || mentor.brandLogoUrl || '',
             baseUrl,
           );
@@ -377,7 +417,7 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
       const description =
         mentorFromHost.brandOgDescription ||
         `Área exclusiva de mentoria de ${mentorFromHost.brandName || mentorFromHost.name}. Acesse cursos, conteúdos e acompanhamento.`;
-      const image = this.absoluteUrl(
+      const image = this.publicImageUrl(
         mentorFromHost.brandOgImageUrl || mentorFromHost.brandBannerUrl || mentorFromHost.brandLogoUrl || '',
         baseUrl,
       );
@@ -388,7 +428,7 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
     this.sendShareHtml(res, {
       title: 'Mentor Glee-go',
       description: 'Plataforma completa de mentoria — gerencie mentorados, cursos, agenda, pagamentos e comunicação em um só lugar.',
-      image: this.absoluteUrl('/og-image.jpg', baseUrl),
+      image: this.publicImageUrl('/og-image.jpg', baseUrl),
       target,
       siteName: 'Mentor Glee-go',
     });
@@ -420,7 +460,7 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
       page.subheadline ||
       page.headline ||
       `${page.title} — ${m.brandName || m.name}`;
-    const image = this.absoluteUrl(
+    const image = this.publicImageUrl(
       page.seo?.ogImage ||
       page.heroImageUrl ||
       m.brandOgImageUrl ||

@@ -293,10 +293,17 @@ export default function SalesPagePublic() {
       if (!meta.parentNode) document.head.appendChild(meta);
     }
     // Thumb OG/Twitter específica da página (fallback: hero → mentor).
-    const ogImage =
+    const resolvePreviewImage = (url?: string) => {
+      if (!url) return "";
+      if (/^https?:\/\//i.test(url)) return url;
+      if (url.startsWith("//")) return `https:${url}`;
+      return `${window.location.origin}${url.startsWith("/") ? "" : "/"}${url}`;
+    };
+    const ogImage = resolvePreviewImage(
       data?.page?.seo?.ogImage ||
       data?.page?.heroImageUrl ||
-      "";
+      ""
+    );
     const setMeta = (key: string, val: string, attr: "name" | "property" = "property") => {
       if (!val) return;
       let el = document.querySelector(`meta[${attr}="${key}"]`);
@@ -309,6 +316,9 @@ export default function SalesPagePublic() {
     };
     if (ogImage) {
       setMeta("og:image", ogImage);
+      setMeta("og:image:secure_url", ogImage);
+      setMeta("og:image:width", "1200");
+      setMeta("og:image:height", "630");
       setMeta("twitter:image", ogImage, "name");
       setMeta("twitter:card", "summary_large_image", "name");
     }
