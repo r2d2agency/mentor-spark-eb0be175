@@ -64,6 +64,9 @@ type Payload = {
     headline?: string; subheadline?: string; description?: string;
     heroImageUrl?: string; videoUrl?: string;
     features: { icon?: string; title: string; text?: string }[];
+    featuresEyebrow?: string;
+    featuresTitle?: string;
+    featuresItemLabel?: string;
     faqs: { q: string; a: string }[];
     badges: string[]; guaranteeText?: string; ctaText: string;
     priceCents: number; currency: string; originalPriceCents?: number;
