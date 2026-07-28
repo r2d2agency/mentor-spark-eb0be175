@@ -110,6 +110,9 @@ export class SalesPagesService {
       'coupons', 'countdown', 'gallery', 'showcase',
       'installmentInterestRate' as any,
       'installmentDisplayCents' as any,
+      'featuresEyebrow' as any,
+      'featuresTitle' as any,
+      'featuresItemLabel' as any,
     ];
     for (const k of editable) {
       if (dto[k] !== undefined) (p as any)[k] = dto[k];
