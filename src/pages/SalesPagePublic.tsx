@@ -608,7 +608,10 @@ export default function SalesPagePublic() {
       {page.features?.length > 0 && (
         <section className="py-16 md:py-20 bg-muted/20 border-b border-border/40">
           <div className="max-w-5xl mx-auto px-6">
-            <h2 className="text-center font-display text-3xl md:text-4xl font-bold mb-10">O que você recebe</h2>
+            {page.featuresEyebrow && (
+              <div className="text-center text-sm uppercase tracking-widest text-muted-foreground mb-2">{page.featuresEyebrow}</div>
+            )}
+            <h2 className="text-center font-display text-3xl md:text-4xl font-bold mb-10">{page.featuresTitle || "O que você recebe"}</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {page.features.map((f, i) => {
                 const Icon = ICONS[f.icon || "sparkles"] || Sparkles;
@@ -890,7 +893,10 @@ function LongFormLayout({
       {(page.features?.length || 0) > 0 && (
         <section className="py-16 md:py-24">
           <div className="max-w-5xl mx-auto px-6">
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-center mb-12" style={{ color: text }}>O que você vai receber</h2>
+            {page.featuresEyebrow && (
+              <div className="text-center text-sm uppercase tracking-widest mb-2" style={{ color: soft }}>{page.featuresEyebrow}</div>
+            )}
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-center mb-12" style={{ color: text }}>{page.featuresTitle || "O que você vai receber"}</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
               {page.features.map((f, i) => {
                 const Icon = ICONS[f.icon || "sparkles"] || Sparkles;
@@ -1416,9 +1422,9 @@ function ImmersionLayout({
         <section className="py-16 md:py-24">
           <div className="max-w-6xl mx-auto px-6">
             <div className="text-center mb-12">
-              <div className="text-sm uppercase tracking-widest mb-2" style={{ color: soft }}>Programa</div>
+              <div className="text-sm uppercase tracking-widest mb-2" style={{ color: soft }}>{page.featuresEyebrow || "Programa"}</div>
               <h2 className="font-display text-3xl md:text-4xl font-bold" style={{ color: text }}>
-                O que você vai aplicar
+                {page.featuresTitle || "O que você vai aplicar"}
               </h2>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
@@ -1444,7 +1450,7 @@ function ImmersionLayout({
                         <Icon className="h-6 w-6" />
                       </div>
                       <div className="text-xs uppercase tracking-widest mb-2" style={{ color: primary }}>
-                        Pilar {String(i + 1).padStart(2, "0")}
+                        {(page.featuresItemLabel || "Pilar")} {String(i + 1).padStart(2, "0")}
                       </div>
                       <h3 className="font-display text-xl md:text-2xl font-bold mb-3" style={{ color: text }}>{f.title}</h3>
                       {f.text && <p className="text-sm md:text-base leading-relaxed" style={{ color: muted }}>{f.text}</p>}
