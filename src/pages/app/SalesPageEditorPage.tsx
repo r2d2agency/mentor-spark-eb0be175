@@ -96,6 +96,9 @@ type SalesPage = {
   heroImageUrl?: string;
   videoUrl?: string;
   features: Feature[];
+  featuresEyebrow?: string;
+  featuresTitle?: string;
+  featuresItemLabel?: string;
   faqs: Faq[];
   testimonials: Testimonial[];
   badges: string[];
@@ -931,6 +934,32 @@ export default function SalesPageEditorPage() {
               <Button variant="outline" size="sm" onClick={() => patch({ features: [...page.features, { title: "Novo benefício", text: "" }] })}>
                 <Plus className="h-4 w-4 mr-1" />Adicionar
               </Button>
+            </div>
+            <div className="grid md:grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Eyebrow (rótulo acima do título)</Label>
+                <Input
+                  value={page.featuresEyebrow ?? ""}
+                  onChange={(e) => patch({ featuresEyebrow: e.target.value })}
+                  placeholder="Ex: Programa"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Título da seção</Label>
+                <Input
+                  value={page.featuresTitle ?? ""}
+                  onChange={(e) => patch({ featuresTitle: e.target.value })}
+                  placeholder="Ex: O que você vai aplicar"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Rótulo de cada card</Label>
+                <Input
+                  value={page.featuresItemLabel ?? ""}
+                  onChange={(e) => patch({ featuresItemLabel: e.target.value })}
+                  placeholder="Ex: Pilar, Módulo, Etapa"
+                />
+              </div>
             </div>
             {page.features.map((f, i) => (
               <div key={i} className="grid md:grid-cols-[180px_1fr_2fr_auto] gap-2 items-start">

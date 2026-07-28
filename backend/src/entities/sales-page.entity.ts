@@ -157,6 +157,18 @@ export class SalesPage {
   @Column({ type: 'jsonb', default: '[]' })
   features: SalesPageFeature[];
 
+  /** Rótulo/eyebrow acima do título da seção de features/pilares. */
+  @Column({ nullable: true })
+  featuresEyebrow?: string;
+
+  /** Título principal da seção de features/pilares. */
+  @Column({ nullable: true })
+  featuresTitle?: string;
+
+  /** Rótulo mostrado em cada card (ex: "Pilar", "Módulo", "Etapa"). */
+  @Column({ nullable: true })
+  featuresItemLabel?: string;
+
   @Column({ type: 'jsonb', default: '[]' })
   faqs: SalesPageFaq[];
 
