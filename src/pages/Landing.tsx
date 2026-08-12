@@ -87,21 +87,15 @@ const categories: Category[] = [
 
 const plans = [
   {
-    name: "Starter", price: "R$ 89,90", period: "/mês",
-    desc: "Para mentores começando a organizar a operação.",
-    features: ["Funil de leads", "Agenda pública", "Prontuário básico", "1 curso na Academy", "Suporte por e-mail"],
-    highlight: false,
-  },
-  {
-    name: "Pro", price: "R$ 199,90", period: "/mês",
+    name: "Pro", price: "R$ 349,90", period: "/mês",
     desc: "Para quem já entrega e quer escalar com método.",
-    features: ["Tudo do Starter", "IA nativa em reuniões e testes", "Academy com cursos ilimitados", "Central de Demandas", "Cobranças recorrentes", "Automações e integrações"],
+    features: ["IA nativa em reuniões e testes", "Academy com cursos ilimitados", "Central de Demandas", "Cobranças recorrentes", "Automações e integrações", "Suporte prioritário"],
     highlight: true,
   },
   {
-    name: "White-label", price: "R$ 399,99", period: "/mês",
+    name: "White-label", price: "R$ 480,00", period: "/mês",
     desc: "Marca própria, domínio próprio, sem menção à plataforma.",
-    features: ["Tudo do Pro", "Domínio + branding 100% seus", "Multi-mentor / time", "Onboarding dedicado", "SLA e suporte prioritário"],
+    features: ["Tudo do Pro", "Domínio + branding 100% seus", "Multi-mentor / time", "Onboarding dedicado", "SLA e suporte 24/7"],
     highlight: false,
   },
 ];
