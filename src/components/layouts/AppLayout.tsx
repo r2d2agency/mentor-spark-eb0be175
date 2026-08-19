@@ -1,39 +1,40 @@
- import {
-   Globe,
-   LayoutGrid,
-   Home,
-   LayoutDashboard,
-   Users,
-   Kanban,
-   ClipboardList,
-   Calendar,
-   CheckSquare,
-   BookOpen,
-   Sparkles,
-   Bell,
-   Settings,
-   LogOut,
-   UserCircle,
-   ShieldCheck,
-   QrCode,
-   Cpu,
-   KeyRound,
-   Plug,
-   Layers,
-   Wallet,
-   CalendarDays,
-   FileText,
-   KanbanSquare,
-   MessageSquare,
-   Zap,
-   Menu,
-   X,
-   Briefcase,
-   GraduationCap,
-   DollarSign,
-   CalendarClock,
-    HelpCircle,
- } from "lucide-react";
+import {
+  Globe,
+  LayoutGrid,
+  Home,
+  LayoutDashboard,
+  Users,
+  Kanban,
+  ClipboardList,
+  Calendar,
+  CheckSquare,
+  BookOpen,
+  Sparkles,
+  Bell,
+  Settings,
+  LogOut,
+  UserCircle,
+  ShieldCheck,
+  QrCode,
+  Cpu,
+  KeyRound,
+  Plug,
+  Layers,
+  Wallet,
+  CalendarDays,
+  FileText,
+  KanbanSquare,
+  MessageSquare,
+  Zap,
+  Menu,
+  X,
+  Briefcase,
+  GraduationCap,
+  DollarSign,
+  CalendarClock,
+  HelpCircle,
+  ChevronDown,
+} from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -43,6 +44,12 @@ import { usePlanFeatures, type PlanFeatures } from "@/hooks/usePlanFeatures";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface NavItem {
   to: string;
@@ -119,61 +126,140 @@ export default function AppLayout() {
   }) : [];
   const displayName = brand?.brandName || user?.brandName || "Mentor Glee-go";
 
-  const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
-    <>
-      <div className="px-6 py-6 border-b border-sidebar-border flex items-center gap-3">
-        {brand?.brandLogoUrl ? (
-          <img src={brand.brandLogoUrl} alt={displayName} className="h-9 w-9 rounded object-contain bg-white/5 p-1" />
-        ) : null}
-        {brand?.brandName && (
-          <div className="min-w-0">
-            <div className="font-display text-lg text-white tracking-tight truncate">{displayName}</div>
-            <div className="text-xs text-sidebar-foreground/60 mt-0.5">Mentoria Inteligente</div>
-          </div>
-        )}
-      </div>
+  const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
+    const mentorItems = items.filter(i => [
+      "/app/leads", "/app/mentorados", "/app/meetings", "/app/scheduling", 
+      "/app/billing", "/app/trails", "/app/community", "/app/analytics",
+      "/app/messages/templates", "/app/whatsapp/groups", "/app/ai", "/app/prompts",
+      "/app/capture", "/app/events", "/app/contracts/templates"
+    ].includes(i.to));
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {items.map((it) => {
-          const Icon = it.icon;
-          const active = loc.pathname === it.to || (it.to !== "/app" && loc.pathname.startsWith(it.to));
-          return (
-            <NavLink
-              key={it.to}
-              to={it.to}
-              end={it.to === "/app"}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                active
-                  ? "bg-sidebar-accent text-white"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white",
-              )}
-            >
+    const adjustmentItems = items.filter(i => [
+      "/app/integrations", "/app/settings/branding", "/app/team", "/app/access-groups", "/app/automations"
+    ].includes(i.to));
+
+    const generalItems = items.filter(i => !mentorItems.includes(i) && !adjustmentItems.includes(i) && !i.to.startsWith("/app/admin"));
+
+    const adminItems = items.filter(i => i.to.startsWith("/app/admin"));
+
+    const NavGroup = ({ label, items, icon: Icon, value }: { label: string, items: NavItem[], icon: any, value: string }) => {
+      if (items.length === 0) return null;
+      return (
+        <AccordionItem value={value} className="border-none">
+          <AccordionTrigger className="py-2 px-3 hover:no-underline hover:bg-sidebar-accent rounded-md text-sidebar-foreground/80 hover:text-white transition-colors [&[data-state=open]]:text-white [&[data-state=open]]:bg-sidebar-accent">
+            <div className="flex items-center gap-3">
               <Icon className="h-4 w-4" />
-              {it.label}
-            </NavLink>
-          );
-        })}
-      </nav>
+              <span className="text-sm font-medium">{label}</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-1 pt-1 ml-4 border-l border-sidebar-border/30">
+            <div className="space-y-1 mt-1">
+              {items.map((it) => {
+                const SubIcon = it.icon;
+                const active = loc.pathname === it.to || (it.to !== "/app" && loc.pathname.startsWith(it.to));
+                return (
+                  <NavLink
+                    key={it.to}
+                    to={it.to}
+                    end={it.to === "/app"}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                      active
+                        ? "bg-sidebar-accent text-white"
+                        : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-white",
+                    )}
+                  >
+                    <SubIcon className="h-3.5 w-3.5" />
+                    {it.label}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      );
+    };
 
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center justify-between gap-1">
-          <div className="min-w-0 flex-1">
-            <div className="text-sm text-white truncate">{user?.name}</div>
-            <div className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</div>
-          </div>
-           <ThemeToggle className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white h-9 w-9" />
-           <Button variant="ghost" size="icon" onClick={() => navigate("/app/profile")} className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white h-9 w-9" title="Meu Perfil">
-             <UserCircle className="h-4 w-4" />
-           </Button>
-          <Button variant="ghost" size="icon" onClick={logout} className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white h-9 w-9">
-            <LogOut className="h-4 w-4" />
-          </Button>
+    return (
+      <>
+        <div className="px-6 py-6 border-b border-sidebar-border flex items-center gap-3">
+          {brand?.brandLogoUrl ? (
+            <img src={brand.brandLogoUrl} alt={displayName} className="h-9 w-9 rounded object-contain bg-white/5 p-1" />
+          ) : null}
+          {brand?.brandName && (
+            <div className="min-w-0">
+              <div className="font-display text-lg text-white tracking-tight truncate">{displayName}</div>
+              <div className="text-xs text-sidebar-foreground/60 mt-0.5">Mentoria Inteligente</div>
+            </div>
+          )}
         </div>
-      </div>
-    </>
-  );
+
+        <nav className="flex-1 px-3 py-4 overflow-y-auto custom-scrollbar">
+          <div className="space-y-1">
+            {generalItems.map((it) => {
+              const Icon = it.icon;
+              const active = loc.pathname === it.to || (it.to !== "/app" && loc.pathname.startsWith(it.to));
+              return (
+                <NavLink
+                  key={it.to}
+                  to={it.to}
+                  end={it.to === "/app"}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                    active
+                      ? "bg-sidebar-accent text-white"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {it.label}
+                </NavLink>
+              );
+            })}
+
+            <Accordion type="multiple" className="w-full space-y-1">
+              <NavGroup 
+                label="Área do Mentor" 
+                items={mentorItems} 
+                icon={Users} 
+                value="mentor" 
+              />
+              <NavGroup 
+                label="Ajustes & Config" 
+                items={adjustmentItems} 
+                icon={Settings} 
+                value="settings" 
+              />
+              <NavGroup 
+                label="Administração" 
+                items={adminItems} 
+                icon={ShieldCheck} 
+                value="admin" 
+              />
+            </Accordion>
+          </div>
+        </nav>
+
+        <div className="p-4 border-t border-sidebar-border">
+          <div className="flex items-center justify-between gap-1">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm text-white truncate">{user?.name}</div>
+              <div className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</div>
+            </div>
+             <ThemeToggle className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white h-9 w-9" />
+             <Button variant="ghost" size="icon" onClick={() => navigate("/app/profile")} className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white h-9 w-9" title="Meu Perfil">
+               <UserCircle className="h-4 w-4" />
+             </Button>
+            <Button variant="ghost" size="icon" onClick={logout} className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white h-9 w-9">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="flex h-screen bg-background">
