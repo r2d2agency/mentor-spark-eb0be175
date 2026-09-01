@@ -120,6 +120,14 @@ type SalesPage = {
   forWho?: string[];
   notForWho?: string[];
   agenda?: AgendaItem[];
+  pain?: {
+    eyebrow?: string; title?: string; intro?: string; listIntro?: string;
+    items: string[]; afterText?: string; closingText?: string; ctaLabel?: string;
+  };
+  benefitsSection?: {
+    eyebrow?: string; title?: string; items: Feature[];
+    closingText?: string; extraText?: string; footnote?: string;
+  };
   gallery?: string[];
   showcase?: { imageUrl?: string; title?: string; eyebrow?: string; text?: string; bullets?: string[]; side?: "left" | "right"; titleSize?: "sm" | "md" | "lg" | "xl"; titleColor?: string; textSize?: "sm" | "md" | "lg" | "xl"; textColor?: string }[];
   about?: {
@@ -571,6 +579,49 @@ export default function SalesPageEditorPage() {
             </Card>
 
             <Card className="p-6 space-y-3">
+              <div>
+                <h3 className="font-bold">Bloco "A dor" (opcional)</h3>
+                <p className="text-xs text-muted-foreground">Aparece logo após o hero: o custo de não agir + lista de tarefas que consomem tempo do time.</p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div><Label>Eyebrow (rótulo pequeno)</Label><Input value={page.pain?.eyebrow || ""} onChange={(e) => patch({ pain: { items: [], ...(page.pain || {}), eyebrow: e.target.value } })} placeholder="O problema" /></div>
+                <div><Label>Rótulo do botão deste bloco (opcional)</Label><Input value={page.pain?.ctaLabel || ""} onChange={(e) => patch({ pain: { items: [], ...(page.pain || {}), ctaLabel: e.target.value } })} placeholder="Deixe em branco para usar o CTA padrão" /></div>
+              </div>
+              <div>
+                <Label>Título / pergunta de impacto</Label>
+                <Input value={page.pain?.title || ""} onChange={(e) => patch({ pain: { items: [], ...(page.pain || {}), title: e.target.value } })} placeholder="Quanto custa uma hora improdutiva dentro da sua empresa?" />
+              </div>
+              <div>
+                <Label>Frase logo abaixo do título</Label>
+                <Input value={page.pain?.intro || ""} onChange={(e) => patch({ pain: { items: [], ...(page.pain || {}), intro: e.target.value } })} placeholder="Agora multiplique isso por 10, 50 ou 100 colaboradores." />
+              </div>
+              <div>
+                <Label>Texto acima da lista</Label>
+                <Input value={page.pain?.listIntro || ""} onChange={(e) => patch({ pain: { items: [], ...(page.pain || {}), listIntro: e.target.value } })} placeholder="Todos os dias, sua equipe gasta tempo:" />
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <Label>Lista de tarefas/dores</Label>
+                  <Button variant="outline" size="sm" onClick={() => patch({ pain: { ...(page.pain || {}), items: [...(page.pain?.items || []), ""] } })}><Plus className="h-4 w-4 mr-1" />Adicionar</Button>
+                </div>
+                {(page.pain?.items || []).map((v, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <Input value={v} onChange={(e) => { const arr = [...(page.pain?.items || [])]; arr[i] = e.target.value; patch({ pain: { ...(page.pain || {}), items: arr } }); }} placeholder="criando documentos do zero" />
+                    <Button variant="ghost" size="sm" onClick={() => patch({ pain: { ...(page.pain || {}), items: (page.pain?.items || []).filter((_, j) => j !== i) } })}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <Label>Parágrafo de virada (após a lista)</Label>
+                <Textarea rows={2} value={page.pain?.afterText || ""} onChange={(e) => patch({ pain: { items: [], ...(page.pain || {}), afterText: e.target.value } })} placeholder="Enquanto isso, a Inteligência Artificial já consegue reduzir horas de algumas dessas atividades para minutos." />
+              </div>
+              <div>
+                <Label>Frase de impacto final do bloco</Label>
+                <Textarea rows={2} value={page.pain?.closingText || ""} onChange={(e) => patch({ pain: { items: [], ...(page.pain || {}), closingText: e.target.value } })} placeholder="Talvez sua empresa não precise apenas de mais pessoas. Talvez precise aumentar a capacidade das pessoas que já tem." />
+              </div>
+            </Card>
+
+            <Card className="p-6 space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold">Esse evento é pra você se…</h3>
                 <Button variant="outline" size="sm" onClick={() => patch({ forWho: [...(page.forWho || []), ""] })}><Plus className="h-4 w-4 mr-1" />Adicionar</Button>
@@ -987,6 +1038,72 @@ export default function SalesPageEditorPage() {
                 </Button>
               </div>
             ))}
+          </Card>
+
+          <Card className="p-6 space-y-3">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="font-bold">Bloco "Multiplique pela empresa" (opcional)</h3>
+                <p className="text-xs text-muted-foreground">Cards de benefício por área/time (ex: Comercial, Financeiro, RH…) + frase de fechamento.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => patch({ benefitsSection: { ...(page.benefitsSection || { items: [] }), items: [...(page.benefitsSection?.items || []), { title: "Nova área", text: "" }] } })}>
+                <Plus className="h-4 w-4 mr-1" />Adicionar
+              </Button>
+            </div>
+            <div className="grid md:grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Eyebrow (rótulo acima do título)</Label>
+                <Input value={page.benefitsSection?.eyebrow || ""} onChange={(e) => patch({ benefitsSection: { items: [], ...(page.benefitsSection || {}), eyebrow: e.target.value } })} placeholder="Agora multiplique isso pela sua empresa" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Título da seção</Label>
+                <Input value={page.benefitsSection?.title || ""} onChange={(e) => patch({ benefitsSection: { items: [], ...(page.benefitsSection || {}), title: e.target.value } })} placeholder="E se sua equipe também soubesse trabalhar dessa forma?" />
+              </div>
+            </div>
+            {(page.benefitsSection?.items || []).map((f, i) => (
+              <div key={i} className="grid md:grid-cols-[180px_1fr_2fr_auto] gap-2 items-start">
+                <Select
+                  value={f.icon || "sparkles"}
+                  onValueChange={(v) => {
+                    const arr = [...(page.benefitsSection?.items || [])]; arr[i] = { ...f, icon: v };
+                    patch({ benefitsSection: { ...(page.benefitsSection || { items: [] }), items: arr } });
+                  }}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {ICON_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input value={f.title} onChange={(e) => {
+                  const arr = [...(page.benefitsSection?.items || [])]; arr[i] = { ...f, title: e.target.value };
+                  patch({ benefitsSection: { ...(page.benefitsSection || { items: [] }), items: arr } });
+                }} placeholder="Comercial" />
+                <Input value={f.text || ""} onChange={(e) => {
+                  const arr = [...(page.benefitsSection?.items || [])]; arr[i] = { ...f, text: e.target.value };
+                  patch({ benefitsSection: { ...(page.benefitsSection || { items: [] }), items: arr } });
+                }} placeholder="Mais tempo vendendo e menos tempo preparando informações." />
+                <Button variant="ghost" size="sm" onClick={() => {
+                  const arr = (page.benefitsSection?.items || []).filter((_, j) => j !== i);
+                  patch({ benefitsSection: { ...(page.benefitsSection || { items: [] }), items: arr } });
+                }}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            <div>
+              <Label>Frase de impacto final do bloco</Label>
+              <Textarea rows={2} value={page.benefitsSection?.closingText || ""} onChange={(e) => patch({ benefitsSection: { items: [], ...(page.benefitsSection || {}), closingText: e.target.value } })} placeholder="Não é fazer seus colaboradores trabalharem mais. É fazer cada hora de trabalho produzir mais resultado." />
+            </div>
+            <div>
+              <Label>Parágrafo complementar (opcional)</Label>
+              <Textarea rows={2} value={page.benefitsSection?.extraText || ""} onChange={(e) => patch({ benefitsSection: { items: [], ...(page.benefitsSection || {}), extraText: e.target.value } })} placeholder="Durante o evento, você começará a identificar onde estão as principais oportunidades de aplicação de IA na sua empresa." />
+            </div>
+            <div>
+              <Label>Observação pequena (opcional)</Label>
+              <Input value={page.benefitsSection?.footnote || ""} onChange={(e) => patch({ benefitsSection: { items: [], ...(page.benefitsSection || {}), footnote: e.target.value } })} placeholder="Esse bloco é o que prepara perfeitamente o treinamento In Company depois." />
+            </div>
           </Card>
 
           <Card className="p-6 space-y-3">

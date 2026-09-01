@@ -92,6 +92,15 @@ type Payload = {
     forWho?: string[];
     notForWho?: string[];
     agenda?: { time?: string; title: string; text?: string }[];
+    pain?: {
+      eyebrow?: string; title?: string; intro?: string; listIntro?: string;
+      items: string[]; afterText?: string; closingText?: string; ctaLabel?: string;
+    };
+    benefitsSection?: {
+      eyebrow?: string; title?: string;
+      items: { icon?: string; title: string; text?: string }[];
+      closingText?: string; extraText?: string; footnote?: string;
+    };
     about?: {
       name?: string; role?: string; bio?: string; photoUrl?: string;
       sectionTitle?: string;
@@ -1260,42 +1269,45 @@ function ImmersionLayout({
         )}
       </section>
 
-      {/* PRA VOCÊ / NÃO É PRA VOCÊ — lado a lado */}
-      {((page.forWho?.length || 0) > 0 || (page.notForWho?.length || 0) > 0) && (
+      {/* A DOR — custo da improdutividade + lista de tarefas que consomem tempo */}
+      {page.pain && ((page.pain.items?.length || 0) > 0 || page.pain.title) && (
         <section className="py-16 md:py-20" style={{ borderTop: `1px solid ${border}` }}>
-          <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-6">
-            {(page.forWho?.length || 0) > 0 && (
-              <div className="rounded-2xl p-8" style={{ background: surface, border: `1px solid ${border}` }}>
-                <div className="text-sm uppercase tracking-widest mb-2" style={{ color: soft }}>Esse evento</div>
-                <h2 className="font-display text-2xl md:text-3xl font-bold mb-6" style={{ color: text }}>
-                  <span style={{ color: primary }}>Foi feito pra você se…</span>
-                </h2>
-                <ul className="space-y-4">
-                  {page.forWho!.map((it, i) => (
-                    <li key={i} className="flex gap-3">
-                      <CheckCircle2 className="h-5 w-5 shrink-0 mt-1" style={{ color: primary }} />
-                      <span style={{ color: muted }}>{it}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+          <div className="max-w-4xl mx-auto px-6 text-center">
+            {page.pain.eyebrow && (
+              <div className="text-sm uppercase tracking-widest mb-3" style={{ color: soft }}>{page.pain.eyebrow}</div>
             )}
-            {(page.notForWho?.length || 0) > 0 && (
-              <div className="rounded-2xl p-8" style={{ background: surface, border: `1px solid ${border}` }}>
-                <div className="text-sm uppercase tracking-widest mb-2" style={{ color: soft }}>Esse evento</div>
-                <h2 className="font-display text-2xl md:text-3xl font-bold mb-6" style={{ color: text }}>
-                  <span style={{ color: soft }}>Não é pra você se…</span>
-                </h2>
-                <ul className="space-y-4">
-                  {page.notForWho!.map((it, i) => (
-                    <li key={i} className="flex gap-3">
-                      <XCircle className="h-5 w-5 shrink-0 mt-1" style={{ color: "#ef4444" }} />
-                      <span style={{ color: muted }}>{it}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {page.pain.title && (
+              <h2 className="font-display text-3xl md:text-4xl font-bold leading-tight mb-4" style={{ color: text }}>
+                {page.pain.title}
+              </h2>
             )}
+            {page.pain.intro && (
+              <p className="text-lg md:text-xl font-medium mb-10" style={{ color: primary }}>{page.pain.intro}</p>
+            )}
+            {page.pain.listIntro && (
+              <p className="text-base md:text-lg mb-6 text-left md:text-center" style={{ color: muted }}>{page.pain.listIntro}</p>
+            )}
+            {(page.pain.items?.length || 0) > 0 && (
+              <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-left max-w-2xl mx-auto mb-10">
+                {page.pain.items.map((it, i) => (
+                  <li key={i} className="flex gap-3 items-start">
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0 mt-2.5" style={{ background: primary }} />
+                    <span style={{ color: muted }}>{it}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {page.pain.afterText && (
+              <p className="text-base md:text-lg leading-relaxed max-w-2xl mx-auto mb-10 whitespace-pre-line" style={{ color: muted }}>
+                {page.pain.afterText}
+              </p>
+            )}
+            {page.pain.closingText && (
+              <p className="font-display text-2xl md:text-3xl font-bold leading-snug max-w-2xl mx-auto mb-10 whitespace-pre-line" style={{ color: text }}>
+                {page.pain.closingText}
+              </p>
+            )}
+            <Cta label={page.pain.ctaLabel} />
           </div>
         </section>
       )}
@@ -1463,6 +1475,60 @@ function ImmersionLayout({
         </section>
       )}
 
+      {/* MULTIPLIQUE — cards de benefício por área/time + fechamento */}
+      {page.benefitsSection && ((page.benefitsSection.items?.length || 0) > 0 || page.benefitsSection.title) && (
+        <section className="py-16 md:py-24" style={{ background: surface, borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}` }}>
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="text-center mb-12 max-w-2xl mx-auto">
+              {page.benefitsSection.eyebrow && (
+                <div className="text-sm uppercase tracking-widest mb-2" style={{ color: soft }}>{page.benefitsSection.eyebrow}</div>
+              )}
+              {page.benefitsSection.title && (
+                <h2 className="font-display text-3xl md:text-4xl font-bold" style={{ color: text }}>
+                  {page.benefitsSection.title}
+                </h2>
+              )}
+            </div>
+            {(page.benefitsSection.items?.length || 0) > 0 && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {page.benefitsSection.items.map((f, i) => {
+                  const Icon = ICONS[f.icon || "sparkles"] || Sparkles;
+                  return (
+                    <div key={i} className="rounded-2xl p-6" style={{ background: cardBg, border: `1px solid ${border}` }}>
+                      <div
+                        className="h-11 w-11 rounded-xl flex items-center justify-center mb-4"
+                        style={{ background: `${primary}1a`, color: primary }}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <h3 className="font-bold mb-2" style={{ color: text }}>{f.title}</h3>
+                      {f.text && <p className="text-sm leading-relaxed" style={{ color: muted }}>{f.text}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {(page.benefitsSection.closingText || page.benefitsSection.extraText || page.benefitsSection.footnote) && (
+              <div className="text-center max-w-2xl mx-auto mt-12">
+                {page.benefitsSection.closingText && (
+                  <p className="font-display text-2xl md:text-3xl font-bold leading-snug mb-5 whitespace-pre-line" style={{ color: text }}>
+                    {page.benefitsSection.closingText}
+                  </p>
+                )}
+                {page.benefitsSection.extraText && (
+                  <p className="text-base md:text-lg leading-relaxed mb-4 whitespace-pre-line" style={{ color: muted }}>
+                    {page.benefitsSection.extraText}
+                  </p>
+                )}
+                {page.benefitsSection.footnote && (
+                  <p className="text-sm italic" style={{ color: soft }}>{page.benefitsSection.footnote}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* AGENDA / Metodologia */}
       {(page.agenda?.length || 0) > 0 && (
         <section className="py-16 md:py-20" style={{ background: surface, borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}` }}>
@@ -1586,6 +1652,46 @@ function ImmersionLayout({
           </section>
         );
       })()}
+
+      {/* PRA VOCÊ / NÃO É PRA VOCÊ — lado a lado */}
+      {((page.forWho?.length || 0) > 0 || (page.notForWho?.length || 0) > 0) && (
+        <section className="py-16 md:py-20" style={{ borderTop: `1px solid ${border}` }}>
+          <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-6">
+            {(page.forWho?.length || 0) > 0 && (
+              <div className="rounded-2xl p-8" style={{ background: surface, border: `1px solid ${border}` }}>
+                <div className="text-sm uppercase tracking-widest mb-2" style={{ color: soft }}>Esse evento</div>
+                <h2 className="font-display text-2xl md:text-3xl font-bold mb-6" style={{ color: text }}>
+                  <span style={{ color: primary }}>Foi feito pra você se…</span>
+                </h2>
+                <ul className="space-y-4">
+                  {page.forWho!.map((it, i) => (
+                    <li key={i} className="flex gap-3">
+                      <CheckCircle2 className="h-5 w-5 shrink-0 mt-1" style={{ color: primary }} />
+                      <span style={{ color: muted }}>{it}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(page.notForWho?.length || 0) > 0 && (
+              <div className="rounded-2xl p-8" style={{ background: surface, border: `1px solid ${border}` }}>
+                <div className="text-sm uppercase tracking-widest mb-2" style={{ color: soft }}>Esse evento</div>
+                <h2 className="font-display text-2xl md:text-3xl font-bold mb-6" style={{ color: text }}>
+                  <span style={{ color: soft }}>Não é pra você se…</span>
+                </h2>
+                <ul className="space-y-4">
+                  {page.notForWho!.map((it, i) => (
+                    <li key={i} className="flex gap-3">
+                      <XCircle className="h-5 w-5 shrink-0 mt-1" style={{ color: "#ef4444" }} />
+                      <span style={{ color: muted }}>{it}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* INVESTIMENTO — card grande com todos os detalhes */}
       <section className="py-16 md:py-24 relative overflow-hidden" style={{ background: surface, borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}` }}>

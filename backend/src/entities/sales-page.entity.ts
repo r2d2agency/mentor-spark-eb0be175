@@ -57,6 +57,38 @@ export interface SalesPageEventInfo {
   extra?: string;     // "Credenciamento a partir das 8h30"
 }
 
+export interface SalesPagePainSection {
+  eyebrow?: string;
+  /** Pergunta/afirmação de impacto (ex: "Quanto custa uma hora improdutiva na sua empresa?") */
+  title?: string;
+  /** Frase logo abaixo do título (ex: "Agora multiplique isso por 10, 50 ou 100 colaboradores.") */
+  intro?: string;
+  /** Texto curto acima da lista (ex: "Todos os dias, sua equipe gasta tempo:") */
+  listIntro?: string;
+  /** Lista de dores/atividades que consomem tempo. */
+  items: string[];
+  /** Parágrafo de virada após a lista (ex: contraste com o que a IA resolve). */
+  afterText?: string;
+  /** Frase de impacto final do bloco, em destaque. */
+  closingText?: string;
+  /** Rótulo do CTA deste bloco (se vazio, usa o ctaText geral da página). */
+  ctaLabel?: string;
+}
+
+export interface SalesPageBenefitsSection {
+  eyebrow?: string;
+  /** Título/pergunta da seção (ex: "E se sua equipe também soubesse trabalhar dessa forma?") */
+  title?: string;
+  /** Cards por área/benefício (reaproveita o mesmo formato das features). */
+  items: SalesPageFeature[];
+  /** Frase de impacto final, em destaque. */
+  closingText?: string;
+  /** Parágrafo complementar após a frase de impacto. */
+  extraText?: string;
+  /** Observação pequena ao final do bloco. */
+  footnote?: string;
+}
+
 export interface SalesPageShowcase {
   imageUrl?: string;
   title?: string;
@@ -262,6 +294,14 @@ export class SalesPage {
   /** Seções alternadas de imagem + texto (storytelling / módulos). */
   @Column({ type: 'jsonb', default: '[]' })
   showcase: SalesPageShowcase[];
+
+  /** Bloco "a dor": custo da improdutividade, lista de tarefas e virada para a IA. */
+  @Column({ type: 'jsonb', nullable: true })
+  pain?: SalesPagePainSection;
+
+  /** Bloco "multiplique pela empresa": cards de benefício por área + fechamento. */
+  @Column({ type: 'jsonb', nullable: true })
+  benefitsSection?: SalesPageBenefitsSection;
 
   /** Contagem regressiva opcional (ativada pelo mentor no editor). */
   @Column({ type: 'jsonb', nullable: true })

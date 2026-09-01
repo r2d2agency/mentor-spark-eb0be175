@@ -91,6 +91,8 @@ export class SalesPagesService {
       about: (dto as any).about,
       eventInfo: (dto as any).eventInfo,
       urgencyText: (dto as any).urgencyText,
+      pain: (dto as any).pain,
+      benefitsSection: (dto as any).benefitsSection,
     });
     return this.pages.save(p);
   }
@@ -113,6 +115,8 @@ export class SalesPagesService {
       'featuresEyebrow' as any,
       'featuresTitle' as any,
       'featuresItemLabel' as any,
+      'pain' as any,
+      'benefitsSection' as any,
     ];
     for (const k of editable) {
       if (dto[k] !== undefined) (p as any)[k] = dto[k];
