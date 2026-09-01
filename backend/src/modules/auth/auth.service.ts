@@ -96,6 +96,53 @@ export class AuthService {
     };
   }
 
+  /**
+   * Cria um novo tenant (mentor) pelo super admin.
+   * Gera senha temporária e envia credenciais por email/WhatsApp.
+   */
+  async adminCreateTenant(dto: {
+    name: string;
+    email: string;
+    phone?: string;
+    brandName?: string;
+    planId?: string | null;
+  }) {
+    const existing = await this.users.findOne({ where: { email: dto.email.toLowerCase() } });
+    if (existing) throw new ConflictException('Email já cadastrado');
+    const baseSlug = this.slugify(dto.brandName || dto.name) || `mentor-${Date.now()}`;
+    let slug = baseSlug;
+    let i = 1;
+    while (await this.users.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${i++}`;
+    }
+    const tempPassword = this.generateTempPassword();
+    const user = this.users.create({
+      email: dto.email.toLowerCase(),
+      passwordHash: await bcrypt.hash(tempPassword, 10),
+      name: dto.name,
+      phone: dto.phone,
+      brandName: dto.brandName || dto.name,
+      role: UserRole.MENTOR,
+      status: UserStatus.ACTIVE,
+      onboardingCompleted: false,
+      mustChangePassword: true,
+      planId: dto.planId || null,
+      slug,
+    });
+    await this.users.save(user);
+    try {
+      await this.sendWelcomeCredentials({
+        mentorId: user.id,
+        email: user.email,
+        name: user.name,
+        password: tempPassword,
+        brandName: user.brandName || user.name,
+        phone: user.phone,
+      });
+    } catch {}
+    return { user, tempPassword };
+  }
+
   async login(email: string, password: string) {
     const user = await this.users
       .createQueryBuilder('u')

@@ -186,6 +186,27 @@ export class AdminController {
     return this.users.findOne({ where: { id } });
   }
 
+  /** Cria um novo tenant (mentor) pelo super admin — gera senha temporária e envia credenciais. */
+  @Auth('super_admin')
+  @Post('tenants')
+  async createTenant(
+    @Body() body: { name: string; email: string; phone?: string; brandName?: string; planId?: string | null },
+  ) {
+    if (!body.name?.trim() || !body.email?.trim()) {
+      throw new BadRequestException('Nome e email são obrigatórios');
+    }
+    const { user, tempPassword } = await this.authService.adminCreateTenant(body);
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      slug: user.slug,
+      brandName: user.brandName,
+      status: user.status,
+      tempPassword,
+    };
+  }
+
   /** Resumo completo de um tenant (mentor) para a tela de gestão. */
   @Auth('super_admin')
   @Get('tenants/:id')

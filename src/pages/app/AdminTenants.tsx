@@ -3,7 +3,7 @@ import { api, setToken } from "@/lib/api";
 import { toast } from "sonner";
 import {
   Loader2, Building2, Settings2, KeyRound, LogIn, ShieldAlert,
-  CreditCard, Copy, ExternalLink, UserCog, AlertTriangle, CheckCircle2, Clock
+  CreditCard, Copy, ExternalLink, UserCog, AlertTriangle, CheckCircle2, Clock, Plus
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,7 @@ export default function AdminTenants() {
   const [selected, setSelected] = useState<TenantDetail | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
 
   async function loadTenants() {
     try {
@@ -106,12 +107,17 @@ export default function AdminTenants() {
             <p className="text-muted-foreground">Gestão completa: plano, senha, acesso, cobranças.</p>
           </div>
         </div>
-        <Input
-          placeholder="Buscar por nome, email, slug…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Buscar por nome, email, slug…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />Novo tenant
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -185,6 +191,121 @@ export default function AdminTenants() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo tenant</DialogTitle>
+            <DialogDescription>
+              Cria uma conta de mentor. Uma senha temporária é gerada e enviada por email/WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+          <CreateTenantForm
+            plans={plans}
+            onCreated={() => { setCreateOpen(false); loadTenants(); }}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ============= Create tenant dialog content =============
+function CreateTenantForm({ plans, onCreated }: { plans: Plan[]; onCreated: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [planId, setPlanId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ email: string; tempPassword: string } | null>(null);
+
+  async function submit() {
+    if (!name.trim() || !email.trim()) {
+      toast.error("Nome e email são obrigatórios");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await api<{ email: string; tempPassword: string }>("/admin/tenants", {
+        method: "POST",
+        body: {
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim() || undefined,
+          brandName: brandName.trim() || undefined,
+          planId: planId || null,
+        },
+      });
+      setResult(r);
+      toast.success("Tenant criado! Credenciais enviadas por email/WhatsApp.");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setBusy(false); }
+  }
+
+  if (result) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm">
+          <div className="font-semibold mb-1 flex items-center gap-2">
+            <KeyRound className="h-4 w-4" />Senha temporária gerada
+          </div>
+          <div className="text-xs text-muted-foreground mb-2">{result.email}</div>
+          <div className="flex items-center gap-2">
+            <code className="bg-background px-2 py-1 rounded font-mono text-base flex-1">{result.tempPassword}</code>
+            <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(result.tempPassword); toast.success("Copiado"); }}>
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">Já foi enviada por email/WhatsApp. O usuário precisa trocá-la no primeiro login.</p>
+        </div>
+        <DialogFooter>
+          <Button onClick={onCreated} className="w-full">Concluir</Button>
+        </DialogFooter>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-3">
+        <div>
+          <Label>Nome *</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do mentor" />
+        </div>
+        <div>
+          <Label>Email *</Label>
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" />
+        </div>
+        <div>
+          <Label>Telefone (WhatsApp)</Label>
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" />
+        </div>
+        <div>
+          <Label>Nome da marca (opcional)</Label>
+          <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="usa o nome se vazio" />
+        </div>
+        <div>
+          <Label>Plano</Label>
+          <Select value={planId || "none"} onValueChange={(v) => setPlanId(v === "none" ? "" : v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem plano</SelectItem>
+              {plans.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name} — R$ {Number(p.priceMonthly).toFixed(2)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button onClick={submit} disabled={busy} className="w-full">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+          Criar tenant
+        </Button>
+      </DialogFooter>
     </div>
   );
 }
