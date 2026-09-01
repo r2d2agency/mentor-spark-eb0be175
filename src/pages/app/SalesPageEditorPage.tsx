@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { MediaUpload } from "@/components/MediaUpload";
-import { ArrowLeft, Sparkles, Loader2, Save, Plus, Trash2, ExternalLink, Copy, Rocket } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Save, Plus, Trash2, ExternalLink, Copy, Rocket, ClipboardPaste } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -161,6 +161,10 @@ export default function SalesPageEditorPage() {
   const [audience, setAudience] = useState("");
   const [priceHint, setPriceHint] = useState("");
 
+  // Importar copy pronta (colar texto)
+  const [pastedCopy, setPastedCopy] = useState("");
+  const [parsing, setParsing] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
@@ -246,6 +250,43 @@ export default function SalesPageEditorPage() {
       toast.error(e.message);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const parseWithAi = async () => {
+    if (pastedCopy.trim().length < 40) {
+      toast.error("Cole o texto completo da página (mínimo 40 caracteres).");
+      return;
+    }
+    try {
+      setParsing(true);
+      const g = await api<any>("/sales-pages/parse", { method: "POST", body: { text: pastedCopy } });
+      patch({
+        template: "immersion",
+        title: g.title || page?.title,
+        headline: g.headline || page?.headline,
+        subheadline: g.subheadline || page?.subheadline,
+        description: g.description || page?.description,
+        eventInfo: g.eventInfo || page?.eventInfo,
+        priceCents: g.priceCents || page?.priceCents,
+        ctaText: g.ctaText || page?.ctaText,
+        guaranteeText: g.guaranteeText || page?.guaranteeText,
+        pain: g.pain || page?.pain,
+        featuresEyebrow: g.featuresEyebrow || page?.featuresEyebrow,
+        featuresTitle: g.featuresTitle || page?.featuresTitle,
+        featuresItemLabel: g.featuresItemLabel || page?.featuresItemLabel,
+        features: (g.features?.length ? g.features : page?.features) || [],
+        benefitsSection: g.benefitsSection || page?.benefitsSection,
+        forWho: g.forWho?.length ? g.forWho : page?.forWho,
+        notForWho: g.notForWho?.length ? g.notForWho : page?.notForWho,
+        urgencyText: g.urgencyText || page?.urgencyText,
+        seo: g.seo || page?.seo,
+      });
+      toast.success('Texto organizado nos blocos! Revise abaixo e clique em "Salvar".');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -925,6 +966,32 @@ export default function SalesPageEditorPage() {
             <Button onClick={generateWithAi} disabled={generating} className="bg-gradient-primary shadow-glow">
               {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
               Gerar copy com IA
+            </Button>
+          </Card>
+
+          <Card className="p-6 space-y-4 mt-4">
+            <div>
+              <h3 className="font-bold mb-1 flex items-center gap-2">
+                <ClipboardPaste className="h-4 w-4 text-primary" /> ...ou cole um texto já pronto
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Já tem a copy inteira escrita (ex: Bloco 1 — Hero, Bloco 2 — A dor, Bloco 3 — Pilares…)? Cole abaixo.
+                A IA só organiza o seu texto nos blocos da página — não reescreve nem inventa conteúdo.
+                Isso configura o modelo "Imersão presencial (evento)" automaticamente.
+              </p>
+            </div>
+            <div>
+              <Label>Cole o texto completo aqui</Label>
+              <Textarea
+                rows={10}
+                value={pastedCopy}
+                onChange={(e) => setPastedCopy(e.target.value)}
+                placeholder={"BLOCO 1 — HERO\nSua empresa pode produzir mais...\n\nBLOCO 2 — A DOR\nQuanto custa uma hora improdutiva...\n\n(cole o texto inteiro aqui)"}
+              />
+            </div>
+            <Button onClick={parseWithAi} disabled={parsing} className="bg-gradient-primary shadow-glow">
+              {parsing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ClipboardPaste className="h-4 w-4 mr-2" />}
+              Organizar texto nos blocos
             </Button>
           </Card>
         </TabsContent>

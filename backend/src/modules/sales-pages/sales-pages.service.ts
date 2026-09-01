@@ -245,6 +245,152 @@ Gere o JSON agora.`;
     };
   }
 
+  // ==================== Importar copy pronta (colar texto) ====================
+  /**
+   * Recebe um texto de copy JÁ ESCRITO (colado pelo mentor) e pede pra IA apenas
+   * ORGANIZAR esse conteúdo nos campos estruturados da página — sem reescrever ou
+   * inventar texto novo. Pensado para o template "immersion" (blocos hero, dor,
+   * pilares, multiplique pela empresa, para quem é, fechamento).
+   */
+  async parseCopy(mentorId: string, dto: { text: string }) {
+    if (!dto?.text || dto.text.trim().length < 40) {
+      throw new BadRequestException('Cole o texto completo da página (mínimo 40 caracteres).');
+    }
+
+    const system = `Você organiza um texto de copy de página de vendas JÁ PRONTO (escrito por um humano) dentro de um formato estruturado. NÃO reescreva, resuma ou invente conteúdo — apenas identifique e distribua o texto original nos campos certos (pode ajustar pontuação/espaçamento mínimos). Se um campo não existir no texto colado, devolva "" ou [].
+
+Gere APENAS um JSON válido, sem markdown, no formato exato:
+{
+  "title": string (nome curto do produto/evento, até 60 chars),
+  "headline": string (título principal do hero — as linhas de impacto iniciais),
+  "subheadline": string (frase de apoio logo abaixo do headline, se houver),
+  "description": string (parágrafo de contexto/pitch do hero, se houver),
+  "eventInfo": {"date": string, "time": string, "location": string, "extra": string} (do padrão tipo "[ DATA ] • [ HORÁRIO ] • [ LOCAL ]"; se vier como placeholder entre colchetes/vazio, devolva "" nesse campo),
+  "priceCents": number (preço em centavos, ex: "R$ 197" => 19700; 0 se não encontrar),
+  "ctaText": string (texto do botão principal do hero),
+  "guaranteeText": string (frase curta abaixo do CTA do hero, ex: "Traga seu notebook. Será mão na massa."),
+  "pain": {
+    "eyebrow": string,
+    "title": string (pergunta/afirmação de impacto do bloco da dor),
+    "intro": string (frase logo abaixo do título),
+    "listIntro": string (frase antes da lista de tarefas/dores),
+    "items": string[] (itens da lista),
+    "afterText": string (parágrafo de virada após a lista),
+    "closingText": string (frase de impacto final do bloco),
+    "ctaLabel": string (texto do botão deste bloco, se houver um diferente do CTA geral)
+  },
+  "featuresEyebrow": string (rótulo acima do título do bloco de pilares/"o que é possível"),
+  "featuresTitle": string,
+  "featuresItemLabel": string (rótulo de cada card, ex: "Pilar"),
+  "features": [{"icon": string, "title": string, "text": string}] (cards do bloco "o que é possível"/pilares),
+  "benefitsSection": {
+    "eyebrow": string (ex: título do bloco "multiplique pela empresa"),
+    "title": string (pergunta/frase logo abaixo),
+    "items": [{"icon": string, "title": string, "text": string}] (cards por área/departamento),
+    "closingText": string (frase de impacto final do bloco),
+    "extraText": string (parágrafo complementar após a frase),
+    "footnote": string (observação pequena final, se houver)
+  },
+  "forWho": string[] (itens do bloco "para quem é"),
+  "notForWho": string[] (itens de "não é pra você", se houver),
+  "urgencyText": string (frase curta de escassez, ex: "Vagas limitadas."),
+  "seo": {"title": string (até 60 chars), "description": string (até 155 chars)}
+}
+Ícones válidos para "icon" (use o mais coerente com o título do card): sparkles, target, trending-up, shield-check, zap, book-open, clock, users, rocket, trophy, heart, star, lightbulb, award, briefcase, brain, dollar-sign, gift, message-circle, mic, video, globe, compass, flag, flame, gem, graduation-cap, handshake, calendar, map-pin, check, check-circle.
+Português do Brasil.`;
+
+    const user = `Texto colado pelo mentor:\n\n${dto.text}\n\nOrganize agora nos campos do JSON.`;
+
+    let raw = '';
+    try {
+      raw = await this.ai.chat(system, user, { mentorId, useCase: 'sales_page_parse_copy' });
+    } catch (e: any) {
+      if (e instanceof ForbiddenException) throw e;
+      throw new BadRequestException(`Falha ao chamar IA: ${e?.message || e}`);
+    }
+
+    const cleaned = raw
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start < 0 || end < 0) {
+      throw new BadRequestException('IA não retornou JSON válido. Tente novamente.');
+    }
+    let parsed: any;
+    try {
+      parsed = JSON.parse(cleaned.slice(start, end + 1));
+    } catch {
+      throw new BadRequestException('IA retornou JSON malformado. Tente novamente.');
+    }
+
+    const VALID_ICONS = new Set([
+      'sparkles', 'target', 'trending-up', 'shield-check', 'zap', 'book-open', 'clock', 'users',
+      'rocket', 'trophy', 'heart', 'star', 'lightbulb', 'award', 'briefcase', 'brain', 'dollar-sign',
+      'gift', 'message-circle', 'mic', 'video', 'globe', 'compass', 'flag', 'flame', 'gem',
+      'graduation-cap', 'handshake', 'calendar', 'map-pin', 'check', 'check-circle',
+    ]);
+    const icon = (v: any) => (VALID_ICONS.has(String(v)) ? String(v) : 'sparkles');
+    const str = (v: any, max: number) => String(v || '').slice(0, max);
+    const arr = (v: any, max: number, itemMax: number) =>
+      Array.isArray(v) ? v.slice(0, max).map((x) => str(x, itemMax)) : [];
+
+    return {
+      title: str(parsed.title, 100),
+      headline: str(parsed.headline, 200),
+      subheadline: str(parsed.subheadline, 400),
+      description: str(parsed.description, 1200),
+      eventInfo: parsed.eventInfo && typeof parsed.eventInfo === 'object' ? {
+        date: str(parsed.eventInfo.date, 80),
+        time: str(parsed.eventInfo.time, 80),
+        location: str(parsed.eventInfo.location, 160),
+        extra: str(parsed.eventInfo.extra, 160),
+      } : undefined,
+      priceCents: Number.isFinite(Number(parsed.priceCents)) ? Math.max(0, Math.round(Number(parsed.priceCents))) : 0,
+      ctaText: str(parsed.ctaText, 40) || 'Quero garantir minha vaga',
+      guaranteeText: str(parsed.guaranteeText, 200),
+      pain: parsed.pain && typeof parsed.pain === 'object' ? {
+        eyebrow: str(parsed.pain.eyebrow, 60),
+        title: str(parsed.pain.title, 200),
+        intro: str(parsed.pain.intro, 240),
+        listIntro: str(parsed.pain.listIntro, 200),
+        items: arr(parsed.pain.items, 14, 200),
+        afterText: str(parsed.pain.afterText, 500),
+        closingText: str(parsed.pain.closingText, 400),
+        ctaLabel: str(parsed.pain.ctaLabel, 40),
+      } : undefined,
+      featuresEyebrow: str(parsed.featuresEyebrow, 60),
+      featuresTitle: str(parsed.featuresTitle, 120),
+      featuresItemLabel: str(parsed.featuresItemLabel, 40),
+      features: Array.isArray(parsed.features) ? parsed.features.slice(0, 10).map((f: any) => ({
+        icon: icon(f?.icon),
+        title: str(f?.title, 80),
+        text: str(f?.text, 240),
+      })) : [],
+      benefitsSection: parsed.benefitsSection && typeof parsed.benefitsSection === 'object' ? {
+        eyebrow: str(parsed.benefitsSection.eyebrow, 100),
+        title: str(parsed.benefitsSection.title, 200),
+        items: Array.isArray(parsed.benefitsSection.items) ? parsed.benefitsSection.items.slice(0, 10).map((f: any) => ({
+          icon: icon(f?.icon),
+          title: str(f?.title, 80),
+          text: str(f?.text, 240),
+        })) : [],
+        closingText: str(parsed.benefitsSection.closingText, 400),
+        extraText: str(parsed.benefitsSection.extraText, 500),
+        footnote: str(parsed.benefitsSection.footnote, 200),
+      } : undefined,
+      forWho: arr(parsed.forWho, 12, 240),
+      notForWho: arr(parsed.notForWho, 8, 240),
+      urgencyText: str(parsed.urgencyText, 200),
+      seo: {
+        title: str(parsed?.seo?.title || parsed.title, 70),
+        description: str(parsed?.seo?.description, 165),
+      },
+    };
+  }
+
   // ==================== Público ====================
   async publicBySlug(mentorSlug: string, pageSlug: string) {
     const m = await this.users.findOne({ where: { slug: mentorSlug, status: UserStatus.ACTIVE } });

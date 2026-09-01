@@ -46,6 +46,12 @@ export class SalesPagesController {
   ) {
     return this.svc.generate(mentorId, dto);
   }
+
+  @Auth('mentor', 'super_admin', 'mentor_team')
+  @Post('parse')
+  parse(@TenantId() mentorId: string, @Body() dto: { text: string }) {
+    return this.svc.parseCopy(mentorId, dto);
+  }
 }
 
 /** Endpoints públicos (sem auth) */
