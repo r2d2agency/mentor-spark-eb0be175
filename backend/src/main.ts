@@ -51,7 +51,18 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'X-Tenant-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-Requested-With',
+      'X-Tenant-Id',
+      // O Asaas envia o token de autenticação do webhook neste header.
+      // Também é usado pelo teste da integração executado no navegador.
+      'asaas-access-token',
+      // Alias aceito pelo controller para webhooks configurados anteriormente.
+      'asaas-token',
+    ],
     exposedHeaders: ['Content-Disposition'],
     maxAge: 86400,
   });
