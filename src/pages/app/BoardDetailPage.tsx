@@ -23,14 +23,17 @@ function CardItem({ card }: { card: Card }) {
     <Card ref={setNodeRef} style={style} {...attributes} {...listeners} className="p-3 cursor-grab active:cursor-grabbing hover:border-primary/40">
       <div className="font-medium text-sm">{card.title}</div>
       {card.leadOrigin && (
-        <div className="text-xs text-muted-foreground mt-1">
-          {card.leadOrigin.url ? (
-            <a href={card.leadOrigin.url} target="_blank" rel="noopener noreferrer" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-              {card.leadOrigin.type === "event" ? "Evento" : "Página de vendas"}: {card.leadOrigin.label}
-            </a>
-          ) : (
-            <>{card.leadOrigin.type === "event" ? "Evento" : "Página de vendas"}: {card.leadOrigin.label}</>
-          )}
+        <div className="mt-1">
+          <span
+            className={`inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded border ${
+              card.leadOrigin.type === "event"
+                ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+            }`}
+            title={card.leadOrigin.label}
+          >
+            {card.leadOrigin.type === "event" ? "🎪" : "🛒"} {card.leadOrigin.label}
+          </span>
         </div>
       )}
       {card.description && <div className="text-xs text-muted-foreground mt-1">{card.description}</div>}

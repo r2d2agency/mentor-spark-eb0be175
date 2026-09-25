@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { Auth } from '../auth/auth.decorators';
 import { TenantId } from '../auth/current-user.decorator';
 import { SalesPagesService } from './sales-pages.service';
@@ -18,6 +19,21 @@ export class SalesPagesController {
   @Get(':id')
   get(@TenantId() mentorId: string, @Param('id') id: string) {
     return this.svc.get(mentorId, id);
+  }
+
+  @Auth('mentor', 'super_admin', 'mentor_team')
+  @Get(':id/analytics')
+  analytics(@TenantId() mentorId: string, @Param('id') id: string, @Query('days') days?: string) {
+    return this.svc.analyticsSummary(mentorId, id, Number(days) || 30);
+  }
+
+  @Auth('mentor', 'super_admin', 'mentor_team')
+  @Get(':id/leads/export')
+  async exportLeads(@TenantId() mentorId: string, @Param('id') id: string, @Res() res: Response) {
+    const csv = await this.svc.exportLeads(mentorId, id);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="leads-${id}.csv"`);
+    res.send(csv);
   }
 
   @Auth('mentor', 'super_admin', 'mentor_team')
@@ -60,8 +76,8 @@ export class PublicSalesPagesController {
   constructor(private svc: SalesPagesService) {}
 
   @Get(':mentorSlug/:pageSlug')
-  publicView(@Param('mentorSlug') mentorSlug: string, @Param('pageSlug') pageSlug: string) {
-    return this.svc.publicBySlug(mentorSlug, pageSlug);
+  publicView(@Param('mentorSlug') mentorSlug: string, @Param('pageSlug') pageSlug: string, @Query('visitorKey') visitorKey?: string) {
+    return this.svc.publicBySlug(mentorSlug, pageSlug, visitorKey?.slice(0, 120));
   }
 
   @Post(':mentorSlug/:pageSlug/checkout')

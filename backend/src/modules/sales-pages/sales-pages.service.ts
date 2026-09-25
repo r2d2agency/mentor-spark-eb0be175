@@ -1,10 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import {
   SalesPage, SalesPagePaymentMode, SalesPageProductType,
   SalesPageCoupon,
 } from '../../entities/sales-page.entity';
+import { SalesPageAnalyticsEvent, SalesPageAnalyticsEventType } from '../../entities/sales-page-analytics-event.entity';
 import { User, UserStatus } from '../../entities/user.entity';
 import { MentorPaymentProvider, PaymentProviderType } from '../../entities/mentor-payment-provider.entity';
 import { AiService } from '../ai/ai.service';
@@ -28,6 +29,7 @@ export class SalesPagesService {
     @InjectRepository(SalesPage) private pages: Repository<SalesPage>,
     @InjectRepository(User) private users: Repository<User>,
     @InjectRepository(MentorPaymentProvider) private providers: Repository<MentorPaymentProvider>,
+    @InjectRepository(SalesPageAnalyticsEvent) private analytics: Repository<SalesPageAnalyticsEvent>,
     private ai: AiService,
     private leads: LeadsService,
     private automations: AutomationsService,
@@ -392,11 +394,18 @@ Português do Brasil.`;
   }
 
   // ==================== Público ====================
-  async publicBySlug(mentorSlug: string, pageSlug: string) {
+  async publicBySlug(mentorSlug: string, pageSlug: string, visitorKey?: string) {
     const m = await this.users.findOne({ where: { slug: mentorSlug, status: UserStatus.ACTIVE } });
     if (!m) throw new NotFoundException('Mentor não encontrado');
     const p = await this.pages.findOne({ where: { mentorId: m.id, slug: pageSlug, published: true } });
     if (!p) throw new NotFoundException('Página não encontrada ou não publicada');
+    if (visitorKey) {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const duplicate = await this.analytics.findOne({ where: { salesPageId: p.id, type: SalesPageAnalyticsEventType.VIEW, visitorKey, createdAt: MoreThan(since) } });
+      if (!duplicate) await this.analytics.save(this.analytics.create({ mentorId: m.id, salesPageId: p.id, type: SalesPageAnalyticsEventType.VIEW, visitorKey }));
+    } else {
+      await this.analytics.save(this.analytics.create({ mentorId: m.id, salesPageId: p.id, type: SalesPageAnalyticsEventType.VIEW }));
+    }
     // Não exporta a lista completa de cupons publicamente (usuário digita o código).
     const publicPage: any = { ...p };
     delete publicPage.coupons;
@@ -484,6 +493,25 @@ Português do Brasil.`;
     }
   }
 
+  async exportLeads(mentorId: string, id: string) {
+    const page = await this.get(mentorId, id);
+    const leads = await this.leads.listAdvanced(mentorId, { source: `sales_page:${page.slug}` });
+    const headers = ['Nome', 'E-mail', 'Telefone', 'Empresa', 'Estágio', 'Temperatura', 'Origem', 'Criado em', 'Tem compra', 'Método', 'Valor (centavos)', 'Compra em'];
+    const cell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const rows = leads.map((lead: any) => [lead.name, lead.email, lead.phone, lead.company, lead.stage, lead.temperature, lead.source, lead.createdAt?.toISOString?.() || lead.createdAt, lead.lastPurchaseAt ? 'sim' : 'não', lead.lastPurchasePaymentMethod, lead.lastPurchaseAmountCents, lead.lastPurchaseAt?.toISOString?.() || lead.lastPurchaseAt].map(cell).join(','));
+    return `\\uFEFF${[headers.map(cell).join(','), ...rows].join('\\r\\n')}`;
+  }
+
+  async analyticsSummary(mentorId: string, id: string, days = 30) {
+    const page = await this.get(mentorId, id);
+    const since = new Date(Date.now() - Math.max(1, Math.min(days, 365)) * 24 * 60 * 60 * 1000);
+    const events = await this.analytics.find({ where: { mentorId, salesPageId: page.id, createdAt: MoreThan(since) } });
+    const views = events.filter((event) => event.type === SalesPageAnalyticsEventType.VIEW).length;
+    const leads = events.filter((event) => event.type === SalesPageAnalyticsEventType.LEAD).length;
+    const purchases = events.filter((event) => event.type === SalesPageAnalyticsEventType.PURCHASE).length;
+    return { days, views, leads, purchases, conversionRate: views ? Number(((leads / views) * 100).toFixed(2)) : 0 };
+  }
+
   // ==================== Checkout transparente Asaas ====================
   async checkout(
     mentorSlug: string,
@@ -566,6 +594,7 @@ Português do Brasil.`;
           },
         });
         freeLeadId = lead.id;
+        await this.analytics.save(this.analytics.create({ mentorId: mentor.id, salesPageId: page.id, type: SalesPageAnalyticsEventType.LEAD }));
         await this.automations.fire({
           type: 'lead_created',
           mentorId: mentor.id,
@@ -753,6 +782,8 @@ Português do Brasil.`;
         },
       });
       createdLeadId = lead.id;
+      await this.analytics.save(this.analytics.create({ mentorId: mentor.id, salesPageId: page.id, type: SalesPageAnalyticsEventType.LEAD }));
+      await this.analytics.save(this.analytics.create({ mentorId: mentor.id, salesPageId: page.id, type: SalesPageAnalyticsEventType.PURCHASE }));
       // Dispara automações configuradas (welcome messages, tarefas, etc.)
       await this.automations.fire({
         type: 'lead_created',

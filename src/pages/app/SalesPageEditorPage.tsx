@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "@/lib/api";
+import { api, API_BASE, getToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { MediaUpload } from "@/components/MediaUpload";
-import { ArrowLeft, Sparkles, Loader2, Save, Plus, Trash2, ExternalLink, Copy, Rocket, ClipboardPaste } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Save, Plus, Trash2, ExternalLink, Copy, Rocket, ClipboardPaste, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -164,6 +164,39 @@ export default function SalesPageEditorPage() {
   // Importar copy pronta (colar texto)
   const [pastedCopy, setPastedCopy] = useState("");
   const [parsing, setParsing] = useState(false);
+
+  // Dashboard da página
+  type DashboardData = { views: number; leads: number; purchases: number; conversionRate: number };
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [dashboardDays, setDashboardDays] = useState(30);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setDashboardLoading(true);
+    api<DashboardData>(`/sales-pages/${id}/analytics?days=${dashboardDays}`)
+      .then((d) => { if (active) setDashboard(d); })
+      .catch(() => { if (active) setDashboard(null); })
+      .finally(() => { if (active) setDashboardLoading(false); });
+    return () => { active = false; };
+  }, [id, dashboardDays]);
+
+  const leadsExportUrl = `${API_BASE}/sales-pages/${id}/leads/export?token=${getToken()}`;
+  const exportLeads = async () => {
+    try {
+      const res = await fetch(leadsExportUrl);
+      if (!res.ok) throw new Error("Falha ao exportar");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `leads-${page?.slug || id}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -347,7 +380,58 @@ export default function SalesPageEditorPage() {
           <TabsTrigger value="offer">Oferta</TabsTrigger>
           <TabsTrigger value="faq">FAQ</TabsTrigger>
           <TabsTrigger value="checkout">Checkout</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
         </TabsList>
+
+        {/* ===== Dashboard ===== */}
+        <TabsContent value="dashboard" className="space-y-4">
+          <Card className="p-6 space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="font-bold">Desempenho da página</h3>
+                <p className="text-sm text-muted-foreground">Visualizações, leads gerados e conversão por período.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={String(dashboardDays)} onValueChange={(v) => setDashboardDays(Number(v))}>
+                  <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Últimos 7 dias</SelectItem>
+                    <SelectItem value="30">Últimos 30 dias</SelectItem>
+                    <SelectItem value="90">Últimos 90 dias</SelectItem>
+                    <SelectItem value="365">Último ano</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" onClick={exportLeads}><Download className="h-4 w-4 mr-1" />Exportar leads</Button>
+              </div>
+            </div>
+            {dashboardLoading ? (
+              <div className="py-10 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : dashboard ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: "Visualizações", value: dashboard.views },
+                    { label: "Leads gerados", value: dashboard.leads },
+                    { label: "Compras", value: dashboard.purchases },
+                    { label: "Conversão", value: `${dashboard.conversionRate}%` },
+                  ].map((kpi) => (
+                    <div key={kpi.label} className="rounded-lg border p-4">
+                      <div className="text-xs text-muted-foreground">{kpi.label}</div>
+                      <div className="text-2xl font-bold mt-1">{kpi.value}</div>
+                    </div>
+                  ))}
+                </div>
+                {dashboard.views === 0 && dashboard.leads === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Sem dados no período. Visualizações começam a contar quando a página publicada é acessada.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Não foi possível carregar as métricas.</p>
+            )}
+          </Card>
+        </TabsContent>
 
         {/* ===== Design ===== */}
         <TabsContent value="design" className="space-y-4">

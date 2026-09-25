@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SalesPage } from '../../entities/sales-page.entity';
+import { SalesPageAnalyticsEvent } from '../../entities/sales-page-analytics-event.entity';
 import { User } from '../../entities/user.entity';
 import { MentorPaymentProvider } from '../../entities/mentor-payment-provider.entity';
 import { SalesPagesController, PublicSalesPagesController } from './sales-pages.controller';
@@ -11,7 +12,7 @@ import { AutomationsModule } from '../automations/automations.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SalesPage, User, MentorPaymentProvider]),
+    TypeOrmModule.forFeature([SalesPage, SalesPageAnalyticsEvent, User, MentorPaymentProvider]),
     AiModule,
     LeadsModule,
     AutomationsModule,

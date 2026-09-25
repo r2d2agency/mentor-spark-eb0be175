@@ -277,6 +277,17 @@ function installmentText(p: { priceCents: number; maxInstallments: number; insta
   return `${p.maxInstallments}x de ${money(per)}`;
 }
 
+function getVisitorKey(mentorSlug?: string, pageSlug?: string) {
+  const storageKey = "sp_visitor_key";
+  let key = "";
+  try { key = localStorage.getItem(storageKey) || ""; } catch {}
+  if (!key) {
+    key = `v-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+    try { localStorage.setItem(storageKey, key); } catch {}
+  }
+  return `${mentorSlug || "m"}:${pageSlug || "p"}:${key}`;
+}
+
 export default function SalesPagePublic() {
   const { mentorSlug, pageSlug } = useParams();
   const [data, setData] = useState<Payload | null>(null);
@@ -286,7 +297,8 @@ export default function SalesPagePublic() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch(`${API_BASE}/public/sales-pages/${mentorSlug}/${pageSlug}`);
+        const visitorKey = getVisitorKey(mentorSlug, pageSlug);
+        const r = await fetch(`${API_BASE}/public/sales-pages/${mentorSlug}/${pageSlug}?visitorKey=${encodeURIComponent(visitorKey)}`);
         if (!r.ok) throw new Error((await r.json())?.message || "Página não encontrada");
         setData(await r.json());
       } catch (e: any) {
