@@ -511,8 +511,14 @@ ${image ? `<meta name="twitter:image" content="${esc(image)}" />` : ''}
     const result = await this.leadsService.createFromCapture({
       mentorId: mentor.id,
       mentorBrand: mentor.brandName || mentor.name,
+      name: body.name,
+      email: body.email,
+      phone: body.phone,
+      company: body.company,
+      revenue: body.revenue,
       eventId,
-      ...body,
+      source: eventId ? `event:${body.eventSlug}` : (body.source || 'capture'),
+      password: body.password,
     });
     return { ok: true, leadId: result.lead.id, accountCreated: result.accountCreated, userChosePassword: result.userChosePassword };
   }

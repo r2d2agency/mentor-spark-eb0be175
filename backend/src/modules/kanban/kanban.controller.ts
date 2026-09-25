@@ -7,6 +7,8 @@ import { KanbanBoard, BoardType } from '../../entities/kanban-board.entity';
 import { KanbanColumn } from '../../entities/kanban-column.entity';
 import { KanbanCard, CardEntityType } from '../../entities/kanban-card.entity';
 import { Lead } from '../../entities/lead.entity';
+import { CaptureEvent } from '../../entities/capture-event.entity';
+import { SalesPage } from '../../entities/sales-page.entity';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 const DEFAULT_LEAD_COLUMNS = [
@@ -27,6 +29,8 @@ export class KanbanController {
     @InjectRepository(KanbanColumn) private columns: Repository<KanbanColumn>,
     @InjectRepository(KanbanCard) private cards: Repository<KanbanCard>,
     @InjectRepository(Lead) private leads: Repository<Lead>,
+    @InjectRepository(CaptureEvent) private events: Repository<CaptureEvent>,
+    @InjectRepository(SalesPage) private salesPages: Repository<SalesPage>,
   ) {}
 
   // ============== BOARDS ==============
@@ -74,7 +78,51 @@ export class KanbanController {
     if (!board) throw new NotFoundException('Board não encontrado');
     const columns = await this.columns.find({ where: { boardId: id }, order: { order: 'ASC' } });
     const cards = await this.cards.find({ where: { boardId: id }, order: { order: 'ASC', createdAt: 'ASC' } });
-    return { ...board, columns, cards };
+    const leadIds = cards
+      .filter((card) => card.entityType === CardEntityType.LEAD && card.entityId)
+      .map((card) => card.entityId);
+    const leads = leadIds.length
+      ? await this.leads.find({ where: { id: In(leadIds), mentorId } })
+      : [];
+    const leadById = new Map(leads.map((lead) => [lead.id, lead]));
+    const eventIds = leads.map((lead) => lead.eventId).filter(Boolean) as string[];
+    const eventSlugs = leads
+      .map((lead) => lead.source?.startsWith('event:') ? lead.source.slice('event:'.length) : null)
+      .filter(Boolean) as string[];
+    const events = eventIds.length || eventSlugs.length
+      ? await this.events.find({ where: [
+        ...(eventIds.length ? [{ id: In(eventIds), mentorId }] : []),
+        ...(eventSlugs.length ? [{ slug: In(eventSlugs), mentorId }] : []),
+      ] })
+      : [];
+    const eventById = new Map(events.map((event) => [event.id, event]));
+    const salesPageSlugs = leads
+      .map((lead) => lead.source?.startsWith('sales_page:') ? lead.source.slice('sales_page:'.length) : null)
+      .filter(Boolean) as string[];
+    const salesPages = salesPageSlugs.length
+      ? await this.salesPages.find({ where: { mentorId, slug: In(salesPageSlugs) } })
+      : [];
+    const salesPageBySlug = new Map(salesPages.map((page) => [page.slug, page]));
+    const enrichedCards = cards.map((card) => {
+      const lead = card.entityId ? leadById.get(card.entityId) : undefined;
+      if (!lead) return card;
+      if (lead.eventId) {
+        const event = eventById.get(lead.eventId);
+        if (event) return { ...card, leadOrigin: { type: 'event', label: event.name } };
+      }
+      if (lead.source?.startsWith('event:')) {
+        const slug = lead.source.slice('event:'.length);
+        const event = events.find((item) => item.slug === slug);
+        if (event) return { ...card, leadOrigin: { type: 'event', label: event.name } };
+      }
+      if (lead.source?.startsWith('sales_page:')) {
+        const slug = lead.source.slice('sales_page:'.length);
+        const page = salesPageBySlug.get(slug);
+        if (page) return { ...card, leadOrigin: { type: 'sales_page', label: page.title || page.slug } };
+      }
+      return card;
+    });
+    return { ...board, columns, cards: enrichedCards };
   }
 
   @Auth('mentor', 'super_admin')

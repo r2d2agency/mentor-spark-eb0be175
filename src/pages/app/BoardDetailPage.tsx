@@ -12,7 +12,8 @@ import { toast } from "sonner";
 import { DndContext, DragEndEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 
 interface Column { id: string; name: string; color: string; order: number; slug?: string; }
-interface Card { id: string; columnId: string; title: string; description?: string; order: number; }
+interface LeadOrigin { type: "event" | "sales_page"; label: string; url?: string; }
+interface Card { id: string; columnId: string; title: string; description?: string; order: number; leadOrigin?: LeadOrigin; }
 interface Board { id: string; name: string; color?: string; columns: Column[]; cards: Card[]; }
 
 function CardItem({ card }: { card: Card }) {
@@ -21,6 +22,17 @@ function CardItem({ card }: { card: Card }) {
   return (
     <Card ref={setNodeRef} style={style} {...attributes} {...listeners} className="p-3 cursor-grab active:cursor-grabbing hover:border-primary/40">
       <div className="font-medium text-sm">{card.title}</div>
+      {card.leadOrigin && (
+        <div className="text-xs text-muted-foreground mt-1">
+          {card.leadOrigin.url ? (
+            <a href={card.leadOrigin.url} target="_blank" rel="noopener noreferrer" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+              {card.leadOrigin.type === "event" ? "Evento" : "Página de vendas"}: {card.leadOrigin.label}
+            </a>
+          ) : (
+            <>{card.leadOrigin.type === "event" ? "Evento" : "Página de vendas"}: {card.leadOrigin.label}</>
+          )}
+        </div>
+      )}
       {card.description && <div className="text-xs text-muted-foreground mt-1">{card.description}</div>}
     </Card>
   );
