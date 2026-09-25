@@ -102,6 +102,31 @@ function avatarFromName(name: string) {
     .toUpperCase();
 }
 
+function sourceBadge(source: string) {
+  const label = source.startsWith("sales_page:")
+    ? `🛒 ${source.slice("sales_page:".length)}`
+    : source.startsWith("event:")
+      ? `🎪 ${source.slice("event:".length)}`
+      : source === "manual"
+        ? null
+        : `🔗 ${source}`;
+  if (!label) return null;
+  return (
+    <Badge
+      className={`text-[10px] h-5 max-w-[130px] truncate ${
+        source.startsWith("sales_page:")
+          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+          : source.startsWith("event:")
+            ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
+            : "bg-muted text-muted-foreground border-border/60"
+      }`}
+      title={`Origem: ${source}`}
+    >
+      {label}
+    </Badge>
+  );
+}
+
 function LeadCard({ lead, onOpen }: { lead: Lead; onOpen: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id });
   const style = transform
@@ -138,7 +163,8 @@ function LeadCard({ lead, onOpen }: { lead: Lead; onOpen: () => void }) {
         </div>
       </div>
       <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {lead.source && sourceBadge(lead.source)}
           {tempBadge(lead.temperature)}
           {lead.score != null && (
             <Badge variant="outline" className="text-[10px] h-5 border-border/60 bg-card/40">
