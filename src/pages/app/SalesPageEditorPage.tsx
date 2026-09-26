@@ -164,6 +164,7 @@ export default function SalesPageEditorPage() {
   // Importar copy pronta (colar texto)
   const [pastedCopy, setPastedCopy] = useState("");
   const [parsing, setParsing] = useState(false);
+  const [templateConfirmed, setTemplateConfirmed] = useState(false);
 
   // Dashboard da página
   type DashboardData = { views: number; leads: number; purchases: number; conversionRate: number };
@@ -248,6 +249,10 @@ export default function SalesPageEditorPage() {
   const unpublish = async () => save({ published: false });
 
   const generateWithAi = async () => {
+    if (!page?.template || !templateConfirmed) {
+      toast.error("Escolha e confirme um template antes de gerar o conteúdo.");
+      return;
+    }
     if (briefing.trim().length < 10) {
       toast.error("Descreva o produto em pelo menos 10 caracteres.");
       return;
@@ -293,9 +298,9 @@ export default function SalesPageEditorPage() {
     }
     try {
       setParsing(true);
-      const g = await api<any>("/sales-pages/parse", { method: "POST", body: { text: pastedCopy } });
+      const g = await api<any>("/sales-pages/parse", { method: "POST", body: { text: pastedCopy, template: page?.template || "classic" } });
       patch({
-        template: "immersion",
+        template: page?.template || "classic",
         title: g.title || page?.title,
         headline: g.headline || page?.headline,
         subheadline: g.subheadline || page?.subheadline,
@@ -326,6 +331,24 @@ export default function SalesPageEditorPage() {
   const publicUrl = page ? `${window.location.origin}/p/${user?.slug || "seu-slug"}/${page.slug}` : "";
 
   if (!page) return <div className="p-6">Carregando…</div>;
+
+  if (!templateConfirmed) {
+    const templates = [
+      { id: "classic", title: "Clássico premium", desc: "Hero, benefícios, oferta e FAQ para mentorias, cursos e ebooks." },
+      { id: "long_form", title: "Versão completa", desc: "Página longa com público, agenda, autoridade, urgência e múltiplos CTAs." },
+      { id: "immersion", title: "Imersão presencial", desc: "Evento com data, local, agenda, pilares, investimento e FAQ." },
+      { id: "event_conversion", title: "Evento de alta conversão", desc: "Promessa, prova social, agenda, benefícios, urgência, mentores e CTAs para checkout." },
+    ];
+    return (
+      <div className="p-6 max-w-5xl mx-auto space-y-6">
+        <div><Link to="/app/sales-pages"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-2" />Voltar</Button></Link><h1 className="text-2xl font-bold mt-5">1. Escolha o template</h1><p className="text-muted-foreground mt-1">Primeiro definimos a estrutura. Depois a IA vai preencher os blocos específicos desse layout.</p></div>
+        <div className="grid md:grid-cols-2 gap-4">
+          {templates.map((t) => <button key={t.id} type="button" onClick={() => patch({ template: t.id as any })} className={`text-left rounded-xl border-2 p-5 transition-all ${(page.template || "classic") === t.id ? "border-primary bg-primary/5 shadow-glow" : "border-border hover:border-primary/40"}`}><div className="font-bold text-lg">{t.title}</div><div className="text-sm text-muted-foreground mt-2">{t.desc}</div>{(page.template || "classic") === t.id && <Badge className="mt-4">Selecionado</Badge>}</button>)}
+        </div>
+        <div className="flex justify-end"><Button size="lg" disabled={!page.template} onClick={() => setTemplateConfirmed(true)}>Continuar para conteúdo e IA <Sparkles className="h-4 w-4 ml-2" /></Button></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">

@@ -254,7 +254,7 @@ Gere o JSON agora.`;
    * inventar texto novo. Pensado para o template "immersion" (blocos hero, dor,
    * pilares, multiplique pela empresa, para quem é, fechamento).
    */
-  async parseCopy(mentorId: string, dto: { text: string }) {
+  async parseCopy(mentorId: string, dto: { text: string; template?: string }) {
     if (!dto?.text || dto.text.trim().length < 40) {
       throw new BadRequestException('Cole o texto completo da página (mínimo 40 caracteres).');
     }

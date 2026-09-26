@@ -65,7 +65,7 @@ export class SalesPagesController {
 
   @Auth('mentor', 'super_admin', 'mentor_team')
   @Post('parse')
-  parse(@TenantId() mentorId: string, @Body() dto: { text: string }) {
+  parse(@TenantId() mentorId: string, @Body() dto: { text: string; template?: string }) {
     return this.svc.parseCopy(mentorId, dto);
   }
 }
