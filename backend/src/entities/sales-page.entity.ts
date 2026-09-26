@@ -140,7 +140,7 @@ export interface SalesPageTheme {
   highlightColor?: string;
 }
 
-export type SalesPageTemplate = 'classic' | 'long_form' | 'immersion';
+export type SalesPageTemplate = 'classic' | 'long_form' | 'immersion' | 'event_conversion';
 
 /**
  * Página de vendas 1 produto = 1 página, publicada em /p/:mentorSlug/:pageSlug.

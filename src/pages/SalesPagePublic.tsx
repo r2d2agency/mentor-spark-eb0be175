@@ -74,7 +74,7 @@ type Payload = {
     installmentInterestRate?: number;
     installmentDisplayCents?: number;
   seo?: { title?: string; description?: string; ogImage?: string };
-    template?: "classic" | "long_form" | "immersion";
+    template?: "classic" | "long_form" | "immersion" | "event_conversion";
     theme?: {
       colorSource?: "brand" | "custom";
       mode?: "light" | "dark";
@@ -391,6 +391,12 @@ export default function SalesPagePublic() {
 
   const template = page.template || "classic";
 
+  if (template === "event_conversion") {
+    return (
+      <EventConversionLayout mentor={mentor} page={page} colors={{ primary: primaryHex, accent: accentHex, bg: bgHex, text: textColor, muted: mutedText, soft: softText, border: borderCol, isDark }} onCta={openCheckout} mentorSlug={mentorSlug!} pageSlug={pageSlug!} checkoutOpen={checkoutOpen} setCheckoutOpen={setCheckoutOpen} />
+    );
+  }
+
   if (template === "immersion") {
     return (
       <ImmersionLayout
@@ -700,6 +706,51 @@ export default function SalesPagePublic() {
       </footer>
 
       <CheckoutDialog open={checkoutOpen} onClose={() => setCheckoutOpen(false)} mentorSlug={mentorSlug!} pageSlug={pageSlug!} page={page} />
+    </div>
+  );
+}
+
+// ================= EVENT CONVERSION (evento de alta conversão) =================
+function EventConversionLayout({ mentor, page, colors, onCta, mentorSlug, pageSlug, checkoutOpen, setCheckoutOpen }: {
+  mentor: Payload["mentor"]; page: Payload["page"];
+  colors: { primary: string; accent: string; bg: string; text: string; muted: string; soft: string; border: string; isDark: boolean };
+  onCta: () => void; mentorSlug: string; pageSlug: string; checkoutOpen: boolean; setCheckoutOpen: (open: boolean) => void;
+}) {
+  const info = page.eventInfo;
+  const aboutPeople = page.about?.people?.length ? page.about.people : (page.about?.name ? [page.about] : []);
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: colors.bg, color: colors.text }}>
+      <header className="relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${colors.bg}, ${colors.primary}35)` }}>
+        <div className="max-w-6xl mx-auto px-6 py-16 md:py-24 grid md:grid-cols-2 gap-10 items-center">
+          <div>
+            {page.badges?.length > 0 && <div className="flex flex-wrap gap-2 mb-5">{page.badges.map((b, i) => <span key={i} className="rounded-full border px-3 py-1 text-xs" style={{ borderColor: `${colors.primary}66`, color: colors.accent }}>{b}</span>)}</div>}
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] mb-4" style={{ color: colors.accent }}>{page.headline || page.title}</p>
+            <h1 className="font-display text-4xl md:text-6xl font-bold leading-tight">{page.subheadline || page.title}</h1>
+            {page.description && <p className="mt-5 text-lg" style={{ color: colors.muted }}>{page.description}</p>}
+            <Button size="lg" onClick={onCta} className="mt-8 h-12 px-8" style={{ backgroundColor: colors.primary }}>{page.ctaText}</Button>
+          </div>
+          <div className="rounded-2xl overflow-hidden border" style={{ borderColor: colors.border }}>
+            {page.heroImageUrl ? <img src={page.heroImageUrl} alt={page.title} className="w-full aspect-[4/3] object-cover" /> : <div className="aspect-[4/3] flex items-center justify-center p-8 text-center" style={{ background: `${colors.primary}20`, color: colors.muted }}>Imagem principal do evento</div>}
+          </div>
+        </div>
+      </header>
+
+      {info && (info.date || info.time || info.location || info.extra) && <section className="border-y" style={{ borderColor: colors.border }}><div className="max-w-6xl mx-auto px-6 py-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">{[["Data", info.date], ["Horário", info.time], ["Local", info.location], ["Detalhes", info.extra]].filter(([, value]) => value).map(([label, value]) => <div key={label as string}><div className="text-xs uppercase tracking-wider" style={{ color: colors.soft }}>{label}</div><div className="font-semibold mt-1">{value}</div></div>)}</div></section>}
+
+      {page.testimonials?.length > 0 && <section className="py-16"><div className="max-w-6xl mx-auto px-6"><p className="text-sm uppercase tracking-wider" style={{ color: colors.accent }}>Quem já viveu</p><h2 className="font-display text-3xl md:text-4xl font-bold mt-2 mb-8">Resultados de quem participou</h2><div className="grid md:grid-cols-3 gap-5">{page.testimonials.map((t, i) => <Card key={i} className="p-5" style={{ backgroundColor: `${colors.primary}10`, borderColor: colors.border }}><p className="leading-relaxed">“{t.quote}”</p><div className="mt-4 text-sm font-semibold">{t.name}</div>{t.role && <div className="text-xs" style={{ color: colors.muted }}>{t.role}</div>}</Card>)}</div></div></section>}
+
+      {page.agenda?.length > 0 && <section className="py-16" style={{ backgroundColor: `${colors.primary}10` }}><div className="max-w-5xl mx-auto px-6"><h2 className="font-display text-3xl md:text-4xl font-bold mb-8">O que você vai viver</h2><div className="space-y-4">{page.agenda.map((item, i) => <div key={i} className="flex gap-4 items-start rounded-xl border p-5" style={{ borderColor: colors.border }}><div className="h-9 w-9 rounded-full flex items-center justify-center font-bold shrink-0" style={{ backgroundColor: colors.primary }}>{i + 1}</div><div>{item.time && <div className="text-xs font-semibold" style={{ color: colors.accent }}>{item.time}</div>}<h3 className="font-bold">{item.title}</h3>{item.text && <p className="mt-1" style={{ color: colors.muted }}>{item.text}</p>}</div></div>)}</div></div></section>}
+
+      {page.features?.length > 0 && <section className="py-16"><div className="max-w-6xl mx-auto px-6"><h2 className="font-display text-3xl md:text-4xl font-bold mb-8">{page.featuresTitle || "O que você vai levar"}</h2><div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">{page.features.map((f, i) => <Card key={i} className="p-5" style={{ backgroundColor: `${colors.primary}10`, borderColor: colors.border }}><h3 className="font-bold">{f.title}</h3>{f.text && <p className="mt-2 text-sm" style={{ color: colors.muted }}>{f.text}</p>}</Card>)}</div></div></section>}
+
+      {page.urgencyText && <section className="py-16 px-6" style={{ backgroundColor: colors.isDark ? "#050505" : colors.primary }}><div className="max-w-4xl mx-auto text-center"><h2 className="font-display text-3xl md:text-5xl font-bold">{page.urgencyText}</h2><Button size="lg" onClick={onCta} className="mt-8" style={{ backgroundColor: colors.accent, color: colors.isDark ? "#000" : "#fff" }}>{page.ctaText}</Button></div></section>}
+
+      {aboutPeople.length > 0 && <section className="py-16"><div className="max-w-6xl mx-auto px-6"><h2 className="font-display text-3xl md:text-4xl font-bold mb-8">{page.about?.sectionTitle || "Quem conduz"}</h2><div className="grid md:grid-cols-2 gap-6">{aboutPeople.map((person, i) => <Card key={i} className="p-5 flex gap-4" style={{ borderColor: colors.border }}>{person.photoUrl ? <img src={person.photoUrl} alt={person.name || "Mentor"} className="h-20 w-20 rounded-xl object-cover" /> : <div className="h-20 w-20 rounded-xl shrink-0" style={{ backgroundColor: `${colors.primary}30` }} />}<div><h3 className="font-bold">{person.name}</h3><div className="text-sm" style={{ color: colors.accent }}>{person.role}</div><p className="text-sm mt-2" style={{ color: colors.muted }}>{person.bio}</p></div></Card>)}</div></div></section>}
+
+      {page.faqs?.length > 0 && <section className="py-16"><div className="max-w-3xl mx-auto px-6"><h2 className="font-display text-3xl md:text-4xl font-bold mb-8">Perguntas frequentes</h2><Accordion type="single" collapsible className="space-y-2">{page.faqs.map((f, i) => <AccordionItem key={i} value={`event-faq-${i}`} className="border rounded-lg px-4" style={{ borderColor: colors.border }}><AccordionTrigger>{f.q}</AccordionTrigger><AccordionContent style={{ color: colors.muted }}>{f.a}</AccordionContent></AccordionItem>)}</Accordion></div></section>}
+
+      <section className="py-16 text-center border-t" style={{ borderColor: colors.border }}><h2 className="font-display text-3xl md:text-5xl font-bold">{page.title}</h2><Button size="lg" onClick={onCta} className="mt-8 h-12 px-10" style={{ backgroundColor: colors.primary }}>{page.ctaText}</Button></section>
+      <CheckoutDialog open={checkoutOpen} onClose={() => setCheckoutOpen(false)} mentorSlug={mentorSlug} pageSlug={pageSlug} page={page} />
     </div>
   );
 }

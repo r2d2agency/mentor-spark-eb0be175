@@ -139,13 +139,13 @@ export class SalesPagesService {
     priceHint?: string;
     productType?: SalesPageProductType;
     tone?: string;
-    template?: 'classic' | 'long_form';
+    template?: 'classic' | 'long_form' | 'immersion' | 'event_conversion';
   }) {
     if (!dto.briefing || dto.briefing.trim().length < 10) {
       throw new BadRequestException('Descreva melhor o produto (mínimo 10 caracteres).');
     }
 
-    const isLong = dto.template === 'long_form';
+    const isLong = dto.template === 'long_form' || dto.template === 'immersion' || dto.template === 'event_conversion';
 
     const longExtra = `,
   "forWho": string[] (5 a 7 itens curtos começando com "Você" — para quem O produto É indicado),

@@ -115,7 +115,7 @@ type SalesPage = {
   paymentProviderId?: string | null;
   published: boolean;
   seo?: { title?: string; description?: string; ogImage?: string };
-  template?: "classic" | "long_form" | "immersion";
+  template?: "classic" | "long_form" | "immersion" | "event_conversion";
   theme?: Theme;
   forWho?: string[];
   notForWho?: string[];
@@ -269,7 +269,7 @@ export default function SalesPageEditorPage() {
         ctaText: g.ctaText || page?.ctaText,
         faqs: g.faqs || [],
         seo: g.seo,
-        ...((page?.template === "long_form" || page?.template === "immersion") ? {
+        ...((page?.template === "long_form" || page?.template === "immersion" || page?.template === "event_conversion") ? {
           forWho: g.forWho || [],
           notForWho: g.notForWho || [],
           agenda: g.agenda || [],
@@ -374,7 +374,7 @@ export default function SalesPageEditorPage() {
           <TabsTrigger value="ai"><Sparkles className="h-3 w-3 mr-1" />Gerar com IA</TabsTrigger>
           <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="content">Conteúdo</TabsTrigger>
-          {(page.template === "long_form" || page.template === "immersion") && (
+          {(page.template === "long_form" || page.template === "immersion" || page.template === "event_conversion") && (
             <TabsTrigger value="longform">Versão completa</TabsTrigger>
           )}
           <TabsTrigger value="offer">Oferta</TabsTrigger>
@@ -444,6 +444,7 @@ export default function SalesPageEditorPage() {
                   { id: "classic", title: "Clássico premium", desc: "Hero dark elegante com foto/vídeo + benefícios + FAQ. Ideal para mentorias, cursos e ebooks." },
                   { id: "long_form", title: "Versão completa (imersão)", desc: "Longa e persuasiva: hero, para quem é/não é, agenda, sobre o mentor, urgência e múltiplos CTAs. Ideal para eventos e imersões." },
                   { id: "immersion", title: "Imersão presencial (evento)", desc: "Estrutura de página de evento presencial: hero + vídeo, barra de infos (data/hora/local), pra você/não é, pilares numerados, investimento e FAQ." },
+                  { id: "event_conversion", title: "Evento de alta conversão", desc: "Landing narrativa com promessa, prova social, agenda, benefícios, urgência, oferta, mentores e CTAs repetidos para o checkout." },
                 ].map((t) => (
                   <button
                     key={t.id}
@@ -690,7 +691,7 @@ export default function SalesPageEditorPage() {
         </TabsContent>
 
         {/* ===== Long form fields (compartilhado com Imersão) ===== */}
-        {(page.template === "long_form" || page.template === "immersion") && (
+        {(page.template === "long_form" || page.template === "immersion" || page.template === "event_conversion") && (
           <TabsContent value="longform" className="space-y-4">
             <Card className="p-6 space-y-3">
               <h3 className="font-bold">Informações do evento (opcional)</h3>
