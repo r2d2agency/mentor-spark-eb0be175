@@ -142,6 +142,32 @@ export interface SalesPageTheme {
 
 export type SalesPageTemplate = 'classic' | 'long_form' | 'immersion' | 'event_conversion';
 
+export type SalesPageCompositionSectionType =
+  | 'nav' | 'hero' | 'band' | 'statement' | 'steps' | 'cards' | 'timeline'
+  | 'people' | 'event_info' | 'offer' | 'faq' | 'cta' | 'image_text' | 'unknown';
+
+export interface SalesPageCompositionSection {
+  id: string;
+  type: SalesPageCompositionSectionType;
+  title?: string;
+  eyebrow?: string;
+  text?: string;
+  items?: Array<{ title?: string; text?: string; label?: string; time?: string }>;
+  people?: Array<{ name?: string; role?: string; bio?: string; photoUrl?: string }>;
+  imageUrl?: string;
+  ctaLabel?: string;
+  anchor?: string;
+  active?: boolean;
+}
+
+export interface SalesPageImportedComposition {
+  version: 1;
+  sections: SalesPageCompositionSection[];
+  theme?: { mode?: 'light' | 'dark'; primaryColor?: string; accentColor?: string; bgColor?: string; fontFamily?: string };
+  assets?: string[];
+  source?: 'html' | 'json';
+}
+
 /**
  * Página de vendas 1 produto = 1 página, publicada em /p/:mentorSlug/:pageSlug.
  * Checkout transparente Asaas usa o MentorPaymentProvider vinculado.
@@ -310,6 +336,9 @@ export class SalesPage {
   /** Cupons de desconto do produto (mentor gerencia no editor). */
   @Column({ type: 'jsonb', default: '[]' })
   coupons: SalesPageCoupon[];
+
+  @Column({ type: 'jsonb', nullable: true })
+  importedComposition?: SalesPageImportedComposition;
 
   @Column({ type: 'jsonb', nullable: true })
   seo?: { title?: string; description?: string; ogImage?: string };

@@ -143,6 +143,7 @@ type SalesPage = {
   urgencyText?: string;
   countdown?: { enabled?: boolean; endsAt?: string; label?: string; hideWhenExpired?: boolean };
   coupons?: Coupon[];
+  importedComposition?: { version: 1; sections: any[]; theme?: any; assets?: string[]; source?: "html" | "json" };
 };
 
 type Provider = { id: string; type: string; label?: string; environment: string; hasApiKey: boolean };
@@ -363,6 +364,11 @@ export default function SalesPageEditorPage() {
 
   const applyReference = () => {
     if (!referenceResult) return;
+    if (referenceFormat === "html" && referenceResult.composition?.sections?.length) {
+      patch({ importedComposition: referenceResult.composition, template: page?.template });
+      toast.success(`${referenceResult.composition.sections.filter((s: any) => s.active !== false).length} seções da referência aplicadas. Preço e checkout continuam manuais.`);
+      return;
+    }
     const selected = (referenceResult.blocks || []).filter((b: any) => b.active);
     const patchData: any = { template: page?.template };
     const asList = (value: any): any[] => {
@@ -1166,7 +1172,7 @@ export default function SalesPageEditorPage() {
           <Card className="p-6 space-y-4 mt-4 border-primary/30">
             <div>
               <h3 className="font-bold mb-1 flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Criar a partir de HTML ou JSON</h3>
-              <p className="text-sm text-muted-foreground">Envie uma referência e a IA identifica os blocos. O template atual é respeitado; preço, provedor e checkout continuam manuais.</p>
+              <p className="text-sm text-muted-foreground">HTML importa a composição da página inteira como seções ordenadas; JSON ou copy podem preencher os blocos do template. Preço, provedor e checkout continuam manuais.</p>
             </div>
             <div className="flex gap-2">
               <Button type="button" variant={referenceFormat === "html" ? "default" : "outline"} onClick={() => setReferenceFormat("html")}>HTML</Button>
@@ -1177,8 +1183,8 @@ export default function SalesPageEditorPage() {
               {importingReference ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />} Analisar referência
             </Button>
             {referenceResult && <div className="space-y-3 border-t pt-4">
-              <p className="text-sm font-medium">{referenceResult.blocks?.filter((b: any) => b.active).length || 0} blocos sugeridos</p>
-              {(referenceResult.blocks || []).map((block: any, index: number) => <label key={block.id || index} className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer">
+              <p className="text-sm font-medium">{referenceFormat === "html" && referenceResult.composition?.sections?.length ? `${referenceResult.composition.sections.filter((s: any) => s.active !== false).length} seções detectadas na ordem da referência` : `${referenceResult.blocks?.filter((b: any) => b.active).length || 0} blocos sugeridos`}</p>
+              {referenceFormat === "html" && referenceResult.composition?.sections?.length ? <div className="space-y-2">{referenceResult.composition.sections.map((section: any, index: number) => <label key={section.id || index} className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer"><input type="checkbox" checked={section.active !== false} onChange={(e) => setReferenceResult((prev: any) => ({ ...prev, composition: { ...prev.composition, sections: prev.composition.sections.map((item: any) => item.id === section.id ? { ...item, active: e.target.checked } : item) } }))} /><span className="flex-1"><b>{index + 1}. {section.type}</b>{section.title && <span className="ml-2">{section.title}</span>}{section.text && <span className="block text-xs text-muted-foreground mt-1">{section.text.slice(0, 240)}</span>}</span></label>)}</div> : (referenceResult.blocks || []).map((block: any, index: number) => <label key={block.id || index} className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer">
                 <input type="checkbox" checked={!!block.active} onChange={(e) => setReferenceResult((prev: any) => ({ ...prev, blocks: prev.blocks.map((item: any) => item.id === block.id ? { ...item, active: e.target.checked } : item) }))} />
                 <span className="flex-1"><b>{block.type}</b><span className="text-xs text-muted-foreground ml-2">confiança {Math.round((block.confidence || 0) * 100)}%</span><br /><span className="text-xs text-muted-foreground">{JSON.stringify(block.payload).slice(0, 240)}</span></span>
               </label>)}

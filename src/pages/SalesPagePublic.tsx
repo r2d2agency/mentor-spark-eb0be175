@@ -117,6 +117,7 @@ type Payload = {
       label?: string;
       hideWhenExpired?: boolean;
     };
+    importedComposition?: { version: 1; sections: any[]; theme?: any; assets?: string[]; source?: "html" | "json" };
   };
 };
 
@@ -390,6 +391,10 @@ export default function SalesPagePublic() {
   const openCheckout = () => setCheckoutOpen(true);
 
   const template = page.template || "classic";
+
+  if (page.importedComposition?.sections?.length) {
+    return <ImportedCompositionLayout mentor={mentor} page={page} sections={page.importedComposition.sections} colors={{ primary: primaryHex, accent: accentHex, bg: bgHex, text: textColor, muted: mutedText, border: borderCol }} onCta={openCheckout} mentorSlug={mentorSlug!} pageSlug={pageSlug!} checkoutOpen={checkoutOpen} setCheckoutOpen={setCheckoutOpen} />;
+  }
 
   if (template === "event_conversion") {
     return (
@@ -708,6 +713,12 @@ export default function SalesPagePublic() {
       <CheckoutDialog open={checkoutOpen} onClose={() => setCheckoutOpen(false)} mentorSlug={mentorSlug!} pageSlug={pageSlug!} page={page} />
     </div>
   );
+}
+
+function ImportedCompositionLayout({ mentor, page, sections, colors, onCta, mentorSlug, pageSlug, checkoutOpen, setCheckoutOpen }: { mentor: Payload["mentor"]; page: Payload["page"]; sections: any[]; colors: { primary: string; accent: string; bg: string; text: string; muted: string; border: string }; onCta: () => void; mentorSlug: string; pageSlug: string; checkoutOpen: boolean; setCheckoutOpen: (open: boolean) => void }) {
+  const active = sections.filter((section) => section.active !== false);
+  const renderItems = (items: any[]) => <div className="grid gap-4 md:grid-cols-3">{items.slice(0, 18).map((item, index) => <Card key={index} className="p-5" style={{ background: `${colors.text}08`, borderColor: colors.border }}><h3 className="font-bold">{item.title || item.label || item.time}</h3>{item.text && <p className="mt-2" style={{ color: colors.muted }}>{item.text}</p>}</Card>)}</div>;
+  return <div className="min-h-screen" style={{ background: colors.bg, color: colors.text }}>{active.map((section, index) => <section key={section.id || index} id={section.anchor} className="mx-auto max-w-6xl px-6 py-16"><div className="mb-8">{section.eyebrow && <div className="mb-3 text-xs font-bold uppercase tracking-widest" style={{ color: colors.accent }}>{section.eyebrow}</div>}{section.title && <h2 className="text-4xl font-bold md:text-6xl">{section.title}</h2>}{section.text && <p className="mt-5 max-w-3xl text-lg" style={{ color: colors.muted }}>{section.text}</p>}</div>{section.items?.length ? renderItems(section.items) : null}{section.people?.length ? renderItems(section.people.map((person: any) => ({ title: person.name, text: [person.role, person.bio].filter(Boolean).join(" — ") }))) : null}{section.imageUrl && <img src={section.imageUrl} alt="" className="mt-6 max-h-96 rounded-2xl object-cover" />}{["hero", "offer", "cta"].includes(section.type) && <Button size="lg" onClick={onCta} className="mt-8" style={{ backgroundColor: colors.primary }}>{section.ctaLabel || page.ctaText || "Quero participar"}</Button>}</section>)}<CheckoutDialog open={checkoutOpen} onClose={() => setCheckoutOpen(false)} mentorSlug={mentorSlug} pageSlug={pageSlug} page={page} /></div>;
 }
 
 // ================= EVENT CONVERSION (evento de alta conversão) =================
