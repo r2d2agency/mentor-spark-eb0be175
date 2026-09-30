@@ -365,11 +365,18 @@ export default function SalesPageEditorPage() {
     if (!referenceResult) return;
     const selected = (referenceResult.blocks || []).filter((b: any) => b.active);
     const patchData: any = { template: page?.template };
+    const asList = (value: any): any[] => {
+      if (Array.isArray(value)) return value;
+      if (Array.isArray(value?.items)) return value.items;
+      if (typeof value === "string") return value ? [value] : [];
+      return [];
+    };
     for (const block of selected) {
       const payload = block.payload || {};
       if (block.type === "hero") Object.assign(patchData, payload);
       else if (["pain", "benefitsSection", "about", "eventInfo"].includes(block.type)) patchData[block.type] = payload;
-      else if (["features", "faqs", "testimonials", "agenda", "forWho", "notForWho"].includes(block.type)) patchData[block.type] = payload.items || payload;
+      else if (["features", "faqs", "testimonials", "agenda"].includes(block.type)) patchData[block.type] = asList(payload.items || payload);
+      else if (["forWho", "notForWho"].includes(block.type)) patchData[block.type] = asList(payload.items || payload).map((item: any) => typeof item === "string" ? item : String(item?.text || item?.title || "")).filter(Boolean);
       else if (block.type === "urgency") patchData.urgencyText = payload.text || payload.urgencyText || "";
       else if (block.type === "guarantee") patchData.guaranteeText = payload.text || payload.guaranteeText || "";
       else if (block.type === "seo" || block.type === "theme") patchData[block.type] = payload;
