@@ -163,7 +163,11 @@ export default function SalesPageEditorPage() {
 
   // Importar copy pronta (colar texto)
   const [pastedCopy, setPastedCopy] = useState("");
+  const [referenceInput, setReferenceInput] = useState("");
+  const [referenceFormat, setReferenceFormat] = useState<"html" | "json">("html");
+  const [referenceResult, setReferenceResult] = useState<any>(null);
   const [parsing, setParsing] = useState(false);
+  const [importingReference, setImportingReference] = useState(false);
   const [templateConfirmed, setTemplateConfirmed] = useState(false);
 
   // Dashboard da página
@@ -326,6 +330,55 @@ export default function SalesPageEditorPage() {
     } finally {
       setParsing(false);
     }
+  };
+
+  const analyzeReference = async () => {
+    if (!page?.template || referenceInput.trim().length < 40) {
+      toast.error("Escolha o template e envie pelo menos 40 caracteres de HTML ou JSON.");
+      return;
+    }
+    try {
+      setImportingReference(true);
+      const body = referenceFormat === "html"
+        ? { html: referenceInput, template: page.template }
+        : { data: JSON.parse(referenceInput), template: page.template };
+      const result = await api<any>("/sales-pages/import-reference", { method: "POST", body });
+      setReferenceResult(result);
+      toast.success(`${result.blocks?.filter((b: any) => b.active).length || 0} blocos detectados. Revise antes de aplicar.`);
+    } catch (e: any) {
+      toast.error(e.message || "Não foi possível analisar a referência.");
+    } finally {
+      setImportingReference(false);
+    }
+  };
+
+  const applyVariation = (variation: any) => {
+    patch({
+      headline: variation.headline || page?.headline,
+      subheadline: variation.subheadline || page?.subheadline,
+      ctaText: variation.ctaText || page?.ctaText,
+    });
+    toast.success("Variação aplicada. Revise o conteúdo antes de salvar.");
+  };
+
+  const applyReference = () => {
+    if (!referenceResult) return;
+    const selected = (referenceResult.blocks || []).filter((b: any) => b.active);
+    const patchData: any = { template: page?.template };
+    for (const block of selected) {
+      const payload = block.payload || {};
+      if (block.type === "hero") Object.assign(patchData, payload);
+      else if (["pain", "benefitsSection", "about", "eventInfo"].includes(block.type)) patchData[block.type] = payload;
+      else if (["features", "faqs", "testimonials", "agenda", "forWho", "notForWho"].includes(block.type)) patchData[block.type] = payload.items || payload;
+      else if (block.type === "urgency") patchData.urgencyText = payload.text || payload.urgencyText || "";
+      else if (block.type === "guarantee") patchData.guaranteeText = payload.text || payload.guaranteeText || "";
+      else if (block.type === "seo" || block.type === "theme") patchData[block.type] = payload;
+    }
+    delete patchData.priceCents;
+    delete patchData.paymentProviderId;
+    delete patchData.paymentMode;
+    patch(patchData);
+    toast.success("Blocos selecionados aplicados. Preço e checkout continuam manuais.");
   };
 
   const publicUrl = page ? `${window.location.origin}/p/${user?.slug || "seu-slug"}/${page.slug}` : "";
@@ -1101,6 +1154,30 @@ export default function SalesPageEditorPage() {
               {parsing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ClipboardPaste className="h-4 w-4 mr-2" />}
               Organizar texto nos blocos
             </Button>
+          </Card>
+
+          <Card className="p-6 space-y-4 mt-4 border-primary/30">
+            <div>
+              <h3 className="font-bold mb-1 flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Criar a partir de HTML ou JSON</h3>
+              <p className="text-sm text-muted-foreground">Envie uma referência e a IA identifica os blocos. O template atual é respeitado; preço, provedor e checkout continuam manuais.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant={referenceFormat === "html" ? "default" : "outline"} onClick={() => setReferenceFormat("html")}>HTML</Button>
+              <Button type="button" variant={referenceFormat === "json" ? "default" : "outline"} onClick={() => setReferenceFormat("json")}>JSON</Button>
+            </div>
+            <Textarea rows={12} value={referenceInput} onChange={(e) => setReferenceInput(e.target.value)} placeholder={referenceFormat === "html" ? "Cole aqui o HTML de referência..." : '{"hero":{"headline":"..."},"features":[...]}' } />
+            <Button onClick={analyzeReference} disabled={importingReference} className="bg-gradient-primary shadow-glow">
+              {importingReference ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />} Analisar referência
+            </Button>
+            {referenceResult && <div className="space-y-3 border-t pt-4">
+              <p className="text-sm font-medium">{referenceResult.blocks?.filter((b: any) => b.active).length || 0} blocos sugeridos</p>
+              {(referenceResult.blocks || []).map((block: any, index: number) => <label key={block.id || index} className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer">
+                <input type="checkbox" checked={!!block.active} onChange={(e) => setReferenceResult((prev: any) => ({ ...prev, blocks: prev.blocks.map((item: any) => item.id === block.id ? { ...item, active: e.target.checked } : item) }))} />
+                <span className="flex-1"><b>{block.type}</b><span className="text-xs text-muted-foreground ml-2">confiança {Math.round((block.confidence || 0) * 100)}%</span><br /><span className="text-xs text-muted-foreground">{JSON.stringify(block.payload).slice(0, 240)}</span></span>
+              </label>)}
+              {referenceResult.variations?.length > 0 && <div className="space-y-2"><p className="text-sm font-medium">Variações de copy</p>{referenceResult.variations.map((variation: any, index: number) => <div key={index} className="rounded-lg border p-3 flex items-start justify-between gap-3"><div className="text-xs"><b>{variation.headline || "Sem headline"}</b><br />{variation.subheadline}<br /><span className="text-muted-foreground">CTA: {variation.ctaText || "—"}</span></div><Button size="sm" variant="outline" onClick={() => applyVariation(variation)}>Usar</Button></div>)}</div>}
+              <Button onClick={applyReference}><Save className="h-4 w-4 mr-2" />Aplicar blocos selecionados</Button>
+            </div>}
           </Card>
         </TabsContent>
 

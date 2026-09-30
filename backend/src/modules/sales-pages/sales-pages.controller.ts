@@ -3,7 +3,7 @@ import type { Response } from 'express';
 import { Auth } from '../auth/auth.decorators';
 import { TenantId } from '../auth/current-user.decorator';
 import { SalesPagesService } from './sales-pages.service';
-import { SalesPageProductType } from '../../entities/sales-page.entity';
+import { SalesPageProductType, SalesPageTemplate } from '../../entities/sales-page.entity';
 
 @Controller('sales-pages')
 export class SalesPagesController {
@@ -67,6 +67,15 @@ export class SalesPagesController {
   @Post('parse')
   parse(@TenantId() mentorId: string, @Body() dto: { text: string; template?: string }) {
     return this.svc.parseCopy(mentorId, dto);
+  }
+
+  @Auth('mentor', 'super_admin', 'mentor_team')
+  @Post('import-reference')
+  importReference(
+    @TenantId() mentorId: string,
+    @Body() dto: { html?: string; data?: unknown; template: SalesPageTemplate },
+  ) {
+    return this.svc.importReference(mentorId, dto);
   }
 }
 
