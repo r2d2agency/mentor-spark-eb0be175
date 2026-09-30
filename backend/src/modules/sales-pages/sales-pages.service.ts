@@ -304,9 +304,25 @@ Gere o JSON agora.`;
     }
     const fenced = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1];
     const json = fenced || response.match(/\{[\s\S]*\}/)?.[0];
-    if (!json) throw new BadRequestException('A IA não retornou uma estrutura válida.');
     let parsed: any;
-    try { parsed = JSON.parse(json.trim()); } catch { throw new BadRequestException('A IA retornou JSON inválido.'); }
+    if (!json) {
+      // Some OpenAI-compatible gateways return a plain-text refusal/mock instead of JSON.
+      // Keep the import useful by returning deterministic blocks from the already-sanitized text.
+      const lines = sourceText.split(/\n+/).map((line) => line.trim()).filter((line) => line.length >= 4);
+      const heading = lines.find((line) => line.length >= 20) || title || 'Página de vendas';
+      parsed = {
+        title: title || heading.slice(0, 120),
+        blocks: [
+          { type: 'hero', confidence: 0.72, payload: { headline: heading.slice(0, 240), description: lines.slice(1, 4).join(' ').slice(0, 800) } },
+          { type: 'features', confidence: 0.55, payload: { items: lines.filter((line) => /prompts|gpt|skill|plugin|agente|benefício|inclui|constru/i.test(line)).slice(0, 12).map((line) => ({ title: line.slice(0, 120), text: '' })) } },
+          { type: 'agenda', confidence: 0.55, payload: { items: lines.filter((line) => /09h|10h|11h|12h|13h|14h|15h|16h|manhã|tarde|abertura|construção/i.test(line)).slice(0, 12).map((line) => ({ title: line.slice(0, 120), text: '' })) } },
+          { type: 'faq', confidence: 0.55, payload: { items: [] } },
+        ],
+        variations: [],
+      };
+    } else {
+      try { parsed = JSON.parse(json.trim()); } catch { throw new BadRequestException('A IA retornou JSON inválido.'); }
+    }
     const allowed = new Set(['hero', 'pain', 'features', 'benefits', 'forWho', 'notForWho', 'agenda', 'about', 'eventInfo', 'testimonials', 'urgency', 'guarantee', 'faq', 'seo', 'theme', 'unknown']);
     const blocks = (Array.isArray(parsed.blocks) ? parsed.blocks : []).slice(0, 24).flatMap((block: any, index: number) => {
       if (!block || !allowed.has(block.type) || !block.payload || typeof block.payload !== 'object' || Array.isArray(block.payload)) return [];
