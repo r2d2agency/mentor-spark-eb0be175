@@ -302,10 +302,11 @@ Gere o JSON agora.`;
       if (e instanceof ForbiddenException) throw e;
       throw new BadRequestException(`Falha ao analisar referência: ${e?.message || e}`);
     }
-    const json = response.match(/\\{[\\s\\S]*\\}/)?.[0];
+    const fenced = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1];
+    const json = fenced || response.match(/\{[\s\S]*\}/)?.[0];
     if (!json) throw new BadRequestException('A IA não retornou uma estrutura válida.');
     let parsed: any;
-    try { parsed = JSON.parse(json); } catch { throw new BadRequestException('A IA retornou JSON inválido.'); }
+    try { parsed = JSON.parse(json.trim()); } catch { throw new BadRequestException('A IA retornou JSON inválido.'); }
     const allowed = new Set(['hero', 'pain', 'features', 'benefits', 'forWho', 'notForWho', 'agenda', 'about', 'eventInfo', 'testimonials', 'urgency', 'guarantee', 'faq', 'seo', 'theme', 'unknown']);
     const blocks = (Array.isArray(parsed.blocks) ? parsed.blocks : []).slice(0, 24).flatMap((block: any, index: number) => {
       if (!block || !allowed.has(block.type) || !block.payload || typeof block.payload !== 'object' || Array.isArray(block.payload)) return [];
