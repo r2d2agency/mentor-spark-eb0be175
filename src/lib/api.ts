@@ -23,11 +23,19 @@ export async function api<T = any>(path: string, opts: Options = {}): Promise<T>
     const t = getToken();
     if (t) headers.Authorization = `Bearer ${t}`;
   }
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (e: any) {
+    // Erro de rede (backend fora, proxy /api/ quebrado, CORS, DNS...).
+    // O fetch original lança "Failed to fetch" sem detalhes — traduzimos.
+    if (e?.name === "AbortError") throw new Error("Tempo esgotado ao falar com o servidor. Tente novamente.");
+    throw new Error("Não foi possível conectar ao servidor. Verifique sua internet ou tente novamente em instantes.");
+  }
   if (!res.ok) {
     let msg = `Erro ${res.status}`;
     try {
