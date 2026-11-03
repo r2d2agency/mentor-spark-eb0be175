@@ -131,47 +131,62 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
      setLoading(true);
      try {
        const host = (forceHost || window.location.hostname).toLowerCase();
-       
-        // Tenta primeiro o host exato
-        const res = await fetch(`${API_BASE}/public/tenant-by-host?host=${encodeURIComponent(host)}`);
-        
-        let data: TenantBrand | null = null;
-        if (res.ok) {
-          const text = await res.text();
-          if (text) {
-            try {
-              data = JSON.parse(text);
-            } catch (e) {
-              console.error("Falha ao parsear branding:", e);
-            }
-          }
-        }
 
-        // Se não encontrou e tem prefixo comum, tenta sem o prefixo
-        if (!data && (host.startsWith('app.') || host.startsWith('portal.'))) {
-          const fallbackHost = host.replace(/^(app|portal)\./, '');
-          const resFallback = await fetch(`${API_BASE}/public/tenant-by-host?host=${encodeURIComponent(fallbackHost)}`);
-          if (resFallback.ok) {
-            const text = await resFallback.text();
-            if (text) {
-              try {
-                data = JSON.parse(text);
-              } catch (e) {
-                console.error("Falha ao parsear branding fallback:", e);
-              }
-            }
-          }
-        }
+       const controller = new AbortController();
+       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-       if (data && (data.brandName || data.slug)) {
-         setBrand(data);
-       } else {
-         // Se chegamos aqui e não temos dados, garantimos que o brand resete para o default
-         // mas mantemos o loading false para o app prosseguir
-         setBrand(null);
+       try {
+         // Tenta primeiro o host exato
+         const res = await fetch(`${API_BASE}/public/tenant-by-host?host=${encodeURIComponent(host)}`, {
+           signal: controller.signal,
+           credentials: 'include',
+         });
+
+         let data: TenantBrand | null = null;
+         if (res.ok) {
+           const text = await res.text();
+           if (text) {
+             try {
+               data = JSON.parse(text);
+             } catch (e) {
+               // Silencioso - não é crítico
+             }
+           }
+         }
+
+         // Se não encontrou e tem prefixo comum, tenta sem o prefixo
+         if (!data && (host.startsWith('app.') || host.startsWith('portal.'))) {
+           try {
+             const fallbackHost = host.replace(/^(app|portal)\./, '');
+             const resFallback = await fetch(`${API_BASE}/public/tenant-by-host?host=${encodeURIComponent(fallbackHost)}`, {
+               signal: controller.signal,
+               credentials: 'include',
+             });
+             if (resFallback.ok) {
+               const text = await resFallback.text();
+               if (text) {
+                 try {
+                   data = JSON.parse(text);
+                 } catch (e) {
+                   // Silencioso - não é crítico
+                 }
+               }
+             }
+           } catch {
+             // Ignora falhas no fallback
+           }
+         }
+
+         if (data && (data.brandName || data.slug)) {
+           setBrand(data);
+         } else {
+           setBrand(null);
+         }
+       } finally {
+         clearTimeout(timeoutId);
        }
      } catch (err) {
-       console.error("Erro ao carregar branding do host:", err);
+       // Silencioso - branding por host é opcional, não deve quebrar a app
        setBrand(null);
      } finally {
        setLoading(false);

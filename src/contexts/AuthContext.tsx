@@ -140,11 +140,17 @@ const AuthContext = createContext<AuthContextValue | null>(null);
            u.role === "super_admin" ||
            u.role === "mentor_team";
          if (!isLovableHost && !isStaffOrAdmin) {
-           const hostTenant = await api<any>(
-             `/public/tenant-by-host?host=${encodeURIComponent(host)}`,
-             { auth: false },
-           ).catch(() => null);
-           const hostTenantId = hostTenant?.id;
+           try {
+             const controller = new AbortController();
+             const timeoutId = setTimeout(() => controller.abort(), 3000);
+             const hostTenant = await fetch(
+               `${(api as any).API_BASE || '/api'}/public/tenant-by-host?host=${encodeURIComponent(host)}`,
+               { credentials: 'include', signal: controller.signal },
+             )
+               .then(async (r) => (r.ok ? r.json() : null))
+               .catch(() => null)
+               .finally(() => clearTimeout(timeoutId));
+             const hostTenantId = hostTenant?.id;
            if (hostTenantId) {
              const userTenantId =
                u.parentMentorId || u.mentorId || u.tenantBrand?.id;
