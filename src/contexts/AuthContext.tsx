@@ -161,6 +161,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
                return;
              }
            }
+           } catch {
+             // ignora falhas na checagem de host (branding opcional)
+           }
          }
        } catch {}
 
