@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Auth } from '../auth/auth.decorators';
 import { TenantId } from '../auth/current-user.decorator';
@@ -67,6 +67,12 @@ export class SalesPagesController {
   @Post('parse')
   parse(@TenantId() mentorId: string, @Body() dto: { text: string; template?: string }) {
     return this.svc.parseCopy(mentorId, dto);
+  }
+
+  @Auth('mentor', 'super_admin', 'mentor_team')
+  @Get(':id/checkout-code')
+  checkoutCode(@TenantId() mentorId: string, @Param('id') id: string) {
+    return this.svc.checkoutCode(mentorId, id);
   }
 
   @Auth('mentor', 'super_admin', 'mentor_team')

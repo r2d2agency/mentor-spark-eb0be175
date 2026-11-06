@@ -251,6 +251,13 @@ Gere o JSON agora.`;
     };
   }
 
+  async checkoutCode(mentorId, id) {
+    const p = await this.pages.findOne({ where: { id, mentorId } });
+    if (!p) throw new NotFoundException('Página não encontrada');
+    const snippet = '<script src="https://api.mentorglee.go/checkout.js" data-mentor-checkout="' + p.id + '" data-mentor="' + mentorId + '" data-value="' + (p.priceCents/100).toFixed(2) + '" data-method="' + p.paymentMode + '" data-product="' + (p.productRefId || '') + '" async></script>';
+    return { snippet, salesPageId: p.id, valueCents: p.priceCents, paymentMode: p.paymentMode, productRefId: p.productRefId };
+  }
+
   // ==================== Importar referência HTML/JSON ====================
   async importReference(
     mentorId: string,
