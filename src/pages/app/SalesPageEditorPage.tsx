@@ -170,6 +170,8 @@ export default function SalesPageEditorPage() {
   const [parsing, setParsing] = useState(false);
   const [importingReference, setImportingReference] = useState(false);
   const [templateConfirmed, setTemplateConfirmed] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
+  const [activeTab, setActiveTab] = useState("ai");
 
   // Dashboard da página
   type DashboardData = { views: number; leads: number; purchases: number; conversionRate: number };
@@ -458,7 +460,14 @@ export default function SalesPageEditorPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="ai" className="space-y-4">
+      <Tabs value={wizardStep === 1 ? "ai" : wizardStep === 2 ? "offer" : wizardStep === 3 ? "checkout" : "dashboard"} onValueChange={(v) => setActiveTab(v)} className="space-y-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          {["Conteúdo", "Oferta", "Checkout", "Publicar"].map((label, i) => (
+            <button key={label} type="button" onClick={() => setWizardStep(i + 1)} className={`px-3 py-1.5 rounded-full text-sm font-medium border ${wizardStep === i + 1 ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}>
+              {i + 2}. {label}
+            </button>
+          ))}
+        </div>
         <TabsList>
           <TabsTrigger value="ai"><Sparkles className="h-3 w-3 mr-1" />Gerar com IA</TabsTrigger>
           <TabsTrigger value="design">Design</TabsTrigger>
@@ -475,6 +484,20 @@ export default function SalesPageEditorPage() {
         {/* ===== Dashboard ===== */}
         <TabsContent value="dashboard" className="space-y-4">
           <Card className="p-6 space-y-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setWizardStep(3)}>← Voltar</Button>
+              <Button variant="outline" onClick={() => save()} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar
+              </Button>
+              {page.published ? (
+                <Button variant="outline" onClick={unpublish}>Despublicar</Button>
+              ) : (
+                <Button onClick={publish} className="bg-gradient-primary shadow-glow">
+                  <Rocket className="h-4 w-4 mr-2" />Publicar
+                </Button>
+              )}
+            </div>
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <h3 className="font-bold">Desempenho da página</h3>
@@ -1792,6 +1815,19 @@ export default function SalesPageEditorPage() {
             </div>
           </Card>
         </TabsContent>
+        {/* ===== Fim das abas + navegação do wizard ===== */}
+        <div className="flex items-center justify-between pt-2">
+          <Button variant="outline" disabled={wizardStep <= 1} onClick={() => setWizardStep((s) => Math.max(1, s - 1))}>← Voltar</Button>
+          {wizardStep < 4 ? (
+            <Button onClick={() => { save(); setWizardStep((s) => Math.min(4, s + 1)); }} className="bg-gradient-primary shadow-glow">
+              Salvar e continuar →
+            </Button>
+          ) : (
+            <Button onClick={publish} className="bg-gradient-primary shadow-glow">
+              <Rocket className="h-4 w-4 mr-2" />Publicar agora
+            </Button>
+          )}
+        </div>
       </Tabs>
     </div>
   );
