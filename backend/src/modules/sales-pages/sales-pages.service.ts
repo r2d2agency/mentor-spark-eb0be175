@@ -598,6 +598,16 @@ Português do Brasil.`;
   }
 
   // ==================== Público ====================
+  async publicCatalog(mentorSlug: string) {
+    const mentor = await this.users.findOne({ where: { slug: mentorSlug, status: UserStatus.ACTIVE } });
+    if (!mentor) throw new NotFoundException('Mentor não encontrado');
+    const pages = await this.pages.find({ where: { mentorId: mentor.id, published: true }, order: { updatedAt: 'DESC' } });
+    return {
+      mentor: { id: mentor.id, slug: mentor.slug, brandName: mentor.brandName },
+      pages: pages.map((p) => ({ id: p.id, slug: p.slug, title: p.title, priceCents: p.priceCents, productRefId: p.productRefId, coverUrl: (p as any).coverUrl || null })),
+    };
+  }
+
   async publicBySlug(mentorSlug: string, pageSlug: string, visitorKey?: string) {
     const m = await this.users.findOne({ where: { slug: mentorSlug, status: UserStatus.ACTIVE } });
     if (!m) throw new NotFoundException('Mentor não encontrado');

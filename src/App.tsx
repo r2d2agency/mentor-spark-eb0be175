@@ -1,4 +1,4 @@
- import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
  import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -91,7 +91,7 @@ import DocsPage from "./pages/app/DocsPage";
 import MentoradoCommunity from "./pages/me/MentoradoCommunity";
 import SalesPagesListPage from "./pages/app/SalesPagesListPage";
 import SalesPageEditorPage from "./pages/app/SalesPageEditorPage";
-import SalesPagePublic from "./pages/SalesPagePublic";
+import SalesPagePublic from "./pages/SalesPagePublic";`nimport PublicCatalog from "./pages/public/PublicCatalog";
 import { PwaPrompts } from "./components/PwaPrompts";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 
@@ -204,7 +204,7 @@ const App = () => (
               <Route path="/quiz" element={<QuizPlayerPage />} />
               <Route path="/agendar/:slug" element={<SchedulingPublicPage />} />
               <Route path="/demands/public/:id" element={<DemandPublicReviewPage />} />
-              <Route path="/p/:mentorSlug/:pageSlug" element={<SalesPagePublic />} />
+              <Route path="/p/:mentorSlug/:pageSlug" element={<SalesPagePublic />} />`n              <Route path="/cursos/:slug" element={<PublicCatalog />} />
 
               {/* Troca de senha (forçada no 1º login) — exige auth, qualquer role */}
               <Route
@@ -328,3 +328,4 @@ const App = () => (
 );
 
 export default App;
+

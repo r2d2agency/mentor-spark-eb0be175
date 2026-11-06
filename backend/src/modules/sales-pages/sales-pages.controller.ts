@@ -123,6 +123,11 @@ export class PublicSalesPagesController {
   ) {
     return this.svc.validateCoupon(mentorSlug, pageSlug, dto);
   }
+
+  @Get('catalog/:mentorSlug')
+  catalog(@Param('mentorSlug') mentorSlug: string) {
+    return this.svc.publicCatalog(mentorSlug);
+  }
 }
 
 
