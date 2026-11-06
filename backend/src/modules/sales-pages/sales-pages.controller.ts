@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+﻿import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
@@ -129,6 +129,7 @@ export class PublicSalesPagesController {
     return this.svc.publicCatalog(mentorSlug);
   }
 }
+
 
 
 

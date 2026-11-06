@@ -11,7 +11,7 @@ import { User, UserStatus } from '../../entities/user.entity';
 import { MentorPaymentProvider, PaymentProviderType } from '../../entities/mentor-payment-provider.entity';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as AdmZip from 'adm-zip';
+import AdmZip from 'adm-zip';
 import { AiService } from '../ai/ai.service';
 import { LeadsService } from '../leads/leads.service';
 import { AutomationsService } from '../automations/automations.service';
@@ -1076,6 +1076,7 @@ Português do Brasil.`;
     };
   }
 }
+
 
 
 
