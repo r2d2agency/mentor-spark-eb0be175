@@ -169,6 +169,8 @@ export default function SalesPageEditorPage() {
   const [referenceResult, setReferenceResult] = useState<any>(null);
   const [parsing, setParsing] = useState(false);
   const [importingReference, setImportingReference] = useState(false);
+  const [uploadingZip, setUploadingZip] = useState(false);
+  const [zipResult, setZipResult] = useState<any>(null);
   const [templateConfirmed, setTemplateConfirmed] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [activeTab, setActiveTab] = useState("ai");
@@ -332,6 +334,29 @@ export default function SalesPageEditorPage() {
       toast.error(e.message);
     } finally {
       setParsing(false);
+    }
+  };
+
+  const uploadZip = async (file: File) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      toast.error("Selecione um arquivo .zip");
+      return;
+    }
+    try {
+      setUploadingZip(true);
+      const form = new FormData();
+      form.append("file", file);
+      form.append("salesPageId", page?.id || "");
+      const res = await fetch(`${API_BASE}/sales-pages/import-zip?token=${getToken()}`, { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Falha no upload do ZIP.");
+      setZipResult(data);
+      toast.success("ZIP importado! index.html sanitizado e snippet substituído.");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploadingZip(false);
     }
   };
 
@@ -1190,6 +1215,24 @@ export default function SalesPageEditorPage() {
               {parsing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ClipboardPaste className="h-4 w-4 mr-2" />}
               Organizar texto nos blocos
             </Button>
+          </Card>
+
+          <Card className="p-6 space-y-4 mt-4 border-primary/30">
+            <div>
+              <h3 className="font-bold mb-1 flex items-center gap-2"><Download className="h-4 w-4 text-primary" /> Enviar landing em ZIP</h3>
+              <p className="text-sm text-muted-foreground">Suba o .zip da sua landing (com index.html + assets). O index.html precisa conter o snippet do checkout. Extraímos tudo para /uploads, sanitizamos e substituímos o snippet pelo checkout real.</p>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Input type="file" accept=".zip" disabled={uploadingZip} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadZip(f); }} className="max-w-sm" />
+              {uploadingZip && <Loader2 className="h-4 w-4 animate-spin" />}
+            </div>
+            {zipResult && (
+              <div className="rounded-lg border p-3 text-sm space-y-1 bg-muted/20">
+                <div className="font-semibold">Importado com sucesso</div>
+                <div className="text-muted-foreground break-all">URL: {zipResult.publicUrl}</div>
+                {zipResult.publicUrl && <a href={zipResult.publicUrl} target="_blank" rel="noreferrer" className="text-primary underline">Abrir página importada →</a>}
+              </div>
+            )}
           </Card>
 
           <Card className="p-6 space-y-4 mt-4 border-primary/30">
