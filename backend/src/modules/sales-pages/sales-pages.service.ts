@@ -9,6 +9,9 @@ import { SalesPageAnalyticsEvent, SalesPageAnalyticsEventType } from '../../enti
 import { Charge, ChargeStatus, ChargeMethod } from '../../entities/charge.entity';
 import { User, UserStatus } from '../../entities/user.entity';
 import { MentorPaymentProvider, PaymentProviderType } from '../../entities/mentor-payment-provider.entity';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as AdmZip from 'adm-zip';
 import { AiService } from '../ai/ai.service';
 import { LeadsService } from '../leads/leads.service';
 import { AutomationsService } from '../automations/automations.service';
@@ -256,6 +259,30 @@ Gere o JSON agora.`;
     if (!p) throw new NotFoundException('Página não encontrada');
     const snippet = '<script src="https://api.mentorglee.go/checkout.js" data-mentor-checkout="' + p.id + '" data-mentor="' + mentorId + '" data-value="' + (p.priceCents/100).toFixed(2) + '" data-method="' + p.paymentMode + '" data-product="' + (p.productRefId || '') + '" async></script>';
     return { snippet, salesPageId: p.id, valueCents: p.priceCents, paymentMode: p.paymentMode, productRefId: p.productRefId };
+  }
+
+  async importZip(mentorId: string, file: any, dto: any) {
+    const zip = new AdmZip(file.buffer);
+    const dest = path.resolve(process.cwd(), 'uploads', 'sales-pages', mentorId, String(Date.now()));
+    fs.mkdirSync(dest, { recursive: true });
+    let indexHtml = '';
+    for (const entry of zip.getEntries()) {
+      const target = path.resolve(dest, entry.entryName);
+      if (!target.startsWith(dest)) continue;
+      if (entry.isDirectory) { fs.mkdirSync(target, { recursive: true }); continue; }
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, entry.getData());
+      if (/index\.html$/i.test(entry.entryName)) indexHtml = entry.getData().toString('utf-8');
+    }
+    if (!indexHtml) throw new BadRequestException('ZIP sem index.html.');
+    const m = indexHtml.match(/<script[^>]*data-mentor-checkout=["'][^"']+["'][^>]*>/i);
+    if (!m) throw new BadRequestException('Snippet de checkout ausente no index.html.');
+    const cfg = await this.checkoutCode(mentorId, dto.salesPageId || '');
+    const clean = indexHtml.replace(/<script[^>]*data-mentor-checkout=["'][^"']+["'][^>]*>/i, cfg.snippet)
+      .replace(/<(script|style|iframe|object|embed|form|svg|math|template|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
+      .replace(/<(script|style|iframe|object|embed|form|svg|math|template|noscript)\b[^>]*\/?>/gi, ' ');
+    fs.writeFileSync(path.join(dest, 'index.html'), clean, 'utf-8');
+    return { ok: true, path: dest, publicUrl: `/uploads/sales-pages/${mentorId}/${path.basename(dest)}/index.html` };
   }
 
   // ==================== Importar referência HTML/JSON ====================

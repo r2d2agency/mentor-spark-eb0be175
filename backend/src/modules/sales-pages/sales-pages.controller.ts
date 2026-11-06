@@ -1,4 +1,8 @@
-﻿import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
 import type { Response } from 'express';
 import { Auth } from '../auth/auth.decorators';
 import { TenantId } from '../auth/current-user.decorator';
@@ -76,6 +80,13 @@ export class SalesPagesController {
   }
 
   @Auth('mentor', 'super_admin', 'mentor_team')
+  @Post('import-zip')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 20 * 1024 * 1024 } }))
+  importZip(@TenantId() mentorId: string, @UploadedFile() file: any, @Body() dto: any) {
+    if (!file) throw new BadRequestException('Arquivo ZIP não enviado.');
+    return this.svc.importZip(mentorId, file, dto);
+  }
+
   @Post('import-reference')
   importReference(
     @TenantId() mentorId: string,
@@ -113,3 +124,6 @@ export class PublicSalesPagesController {
     return this.svc.validateCoupon(mentorSlug, pageSlug, dto);
   }
 }
+
+
+
