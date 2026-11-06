@@ -348,7 +348,11 @@ export default function SalesPageEditorPage() {
       const form = new FormData();
       form.append("file", file);
       form.append("salesPageId", page?.id || "");
-      const res = await fetch(`${API_BASE}/sales-pages/import-zip?token=${getToken()}`, { method: "POST", body: form });
+      const res = await fetch(`${API_BASE}/sales-pages/import-zip`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: form,
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Falha no upload do ZIP.");
       setZipResult(data);
