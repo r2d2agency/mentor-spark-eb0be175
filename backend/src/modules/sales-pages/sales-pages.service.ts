@@ -265,6 +265,13 @@ Gere o JSON agora.`;
   ) {
     const validTemplates: SalesPageTemplate[] = ['classic', 'long_form', 'immersion', 'event_conversion'];
     if (!validTemplates.includes(dto.template)) throw new BadRequestException('Escolha um template válido antes de importar.');
+    if (typeof dto.html === 'string' && dto.html.trim().length > 0) {
+      const m = dto.html.match(/<script[^>]*data-mentor-checkout=["'][^"']+["'][^>]*>/i);
+      if (!m) throw new BadRequestException('Código de checkout (snippet) ausente no HTML. Import bloqueado.');
+      const tag = m[0];
+      const gv = (name) => { const r = tag.match(new RegExp(name + '=["\x27]([^"\x27]+)["\x27]', 'i')); return r ? r[1] : null; };
+      if (!gv('data-value') || !gv('data-method')) throw new BadRequestException('Snippet de checkout inválido: faltam data-value/data-method.');
+    }
     const hasHtml = typeof dto.html === 'string' && dto.html.trim().length > 0;
     const hasData = dto.data !== undefined && dto.data !== null;
     if (hasHtml === hasData) throw new BadRequestException('Envie somente uma referência: HTML ou JSON.');
