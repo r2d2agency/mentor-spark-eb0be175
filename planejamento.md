@@ -43,24 +43,24 @@
 
 ## 3. Plano de implementação por fases
 
-### Fase A — Área de membros personalizada (Netflix)
-1. Aplicar `BrandingContext` em `/me` (logo, cor, banner por tenant).
-2. Player de vídeo por lição (YouTube/Vimeo/upload) + progresso.
-3. Home Netflix: "continuar assistindo", vitrine de trilhas do mentor, lock visual para `PAID`.
-4. Auto-grant de trail-access no webhook Asaas (já existe grant manual; automatizar).
+### Fase A — Área de membros personalizada (Netflix) ✅
+1. ~~Aplicar `BrandingContext` em `/me`~~ → já existia.
+2. ~~Player de vídeo por lição~~ → já existia (YouTube/Vimeo embed).
+3. Home Netflix: "continuar assistindo", vitrine de trilhas do mentor, lock visual para `PAID`. (pendente)
+4. ~~Auto-grant de trail-access no webhook Asaas~~ → implementado (persistência de Charge + `onChargePaid` com `salesPageId`/`productRefId`).
 
-### Fase B — Código de checkout injetável
-1. Novo endpoint `GET /sales-pages/:id/checkout-code` → retorna snippet (script + data-atributos: valor, método, produto, mentor).
-2. Parser de validação no import: detecta snippet, extrai config, valida contra `SalesPage`.
-3. Se snippet ausente/inválido → import bloqueado com erro claro.
+### Fase B — Código de checkout injetável ✅
+1. ~~Novo endpoint `GET /sales-pages/:id/checkout-code`~~ → implementado.
+2. ~~Parser de validação no import: detecta snippet, extrai config, valida contra `SalesPage`~~ → implementado.
+3. ~~Se snippet ausente/inválido → import bloqueado com erro claro~~ → implementado.
 
-### Fase C — Import de landing completa (ZIP/HTML)
-1. Upload de ZIP → extração server-side → assets em `/uploads/sales-pages/:id/`.
-2. Renderização do HTML importado (sanitizado) com substituição do snippet pelo checkout real.
-3. Slug público `/p/:mentor/:page` já existente.
+### Fase C — Import de landing completa (ZIP/HTML) ✅
+1. ~~Upload de ZIP → extração server-side → assets em `/uploads/sales-pages/:id/`~~ → `POST /sales-pages/import-zip` com `adm-zip`, proteção zip-slip, storage `/uploads` (volume EasyPanel).
+2. ~~Renderização do HTML importado (sanitizado) com substituição do snippet pelo checkout real~~ → implementado.
+3. Slug público `/p/:mentor/:page` reutilizado.
 
-### Fase D — Vitrine pública de cursos por mentor
-- Página pública `/cursos` ou `/catalogo` por mentor, listando as trilhas/cursos disponíveis (com lock visual para `PAID` e link para sales page/checkout).
+### Fase D — Vitrine pública de cursos por mentor ✅
+- ~~Página pública `/cursos/:slug` por mentor, listando sales pages com link para checkout~~ → endpoint `GET /public/sales-pages/catalog/:mentorSlug` + página `PublicCatalog`.
 
 ---
 
