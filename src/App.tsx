@@ -204,7 +204,8 @@ const App = () => (
               <Route path="/quiz" element={<QuizPlayerPage />} />
               <Route path="/agendar/:slug" element={<SchedulingPublicPage />} />
               <Route path="/demands/public/:id" element={<DemandPublicReviewPage />} />
-              <Route path="/p/:mentorSlug/:pageSlug" element={<SalesPagePublic />} />`n              <Route path="/cursos/:slug" element={<PublicCatalog />} />
+              <Route path="/p/:mentorSlug/:pageSlug" element={<SalesPagePublic />} />
+              <Route path="/cursos/:slug" element={<PublicCatalog />} />
 
               {/* Troca de senha (forçada no 1º login) — exige auth, qualquer role */}
               <Route
@@ -328,4 +329,5 @@ const App = () => (
 );
 
 export default App;
+
 
