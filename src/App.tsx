@@ -91,7 +91,8 @@ import DocsPage from "./pages/app/DocsPage";
 import MentoradoCommunity from "./pages/me/MentoradoCommunity";
 import SalesPagesListPage from "./pages/app/SalesPagesListPage";
 import SalesPageEditorPage from "./pages/app/SalesPageEditorPage";
-import SalesPagePublic from "./pages/SalesPagePublic";`nimport PublicCatalog from "./pages/public/PublicCatalog";
+import SalesPagePublic from "./pages/SalesPagePublic";
+import PublicCatalog from "./pages/public/PublicCatalog";
 import { PwaPrompts } from "./components/PwaPrompts";
 import { OfflineIndicator } from "./components/OfflineIndicator";
 
