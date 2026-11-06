@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Trail, TrailAccessMode } from '../../entities/trail.entity';
@@ -357,13 +357,31 @@ export class TrailAccessService {
   async onChargePaid(chargeId: string) {
     const charge = await this.charges.findOne({ where: { id: chargeId } });
     const reqId = (charge?.metadata as any)?.trailAccessRequestId;
-    if (!reqId) return;
-    const req = await this.requests.findOne({ where: { id: reqId } });
-    if (!req) return;
-    if (req.status === TrailAccessRequestStatus.PAID || req.status === TrailAccessRequestStatus.APPROVED) return;
-    await this.grantFromRequest(req);
-    req.status = TrailAccessRequestStatus.PAID;
-    req.resolvedAt = new Date();
-    await this.requests.save(req);
+    if (reqId) {
+      const req = await this.requests.findOne({ where: { id: reqId } });
+      if (!req) return;
+      if (req.status === TrailAccessRequestStatus.PAID || req.status === TrailAccessRequestStatus.APPROVED) return;
+      await this.grantFromRequest(req);
+      req.status = TrailAccessRequestStatus.PAID;
+      req.resolvedAt = new Date();
+      await this.requests.save(req);
+      return;
+    }
+    const meta = charge.metadata as any;
+    const trailId = meta?.productRefId;
+    if (meta?.salesPageId && trailId && charge.leadId) {
+      const trail = await this.trails.findOne({ where: { id: trailId } });
+      if (!trail) return;
+      const lead = await this.leads.findOne({ where: { id: charge.leadId } });
+      if (!lead) return;
+      let acc = await this.accesses.findOne({ where: { trailId, leadId: lead.id } });
+      if (!acc) {
+        acc = this.accesses.create({ mentorId: trail.mentorId, trailId, leadId: lead.id, source: TrailAccessSource.PAYMENT, sourceRef: charge.id });
+        await this.accesses.save(acc);
+      }
+      if (lead.userId) {
+        await this.notifications.create({ userId: lead.userId, type: 'trail', title: 'Trilha liberada', body: 'Acesso liberado.', link: '/me/trails/' + trail.id }).catch(() => null);
+      }
+    }
   }
 }

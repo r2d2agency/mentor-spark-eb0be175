@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+﻿import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
 import {
@@ -6,6 +6,7 @@ import {
   SalesPageCoupon, SalesPageCompositionSection, SalesPageImportedComposition,
 } from '../../entities/sales-page.entity';
 import { SalesPageAnalyticsEvent, SalesPageAnalyticsEventType } from '../../entities/sales-page-analytics-event.entity';
+import { Charge, ChargeStatus, ChargeMethod } from '../../entities/charge.entity';
 import { User, UserStatus } from '../../entities/user.entity';
 import { MentorPaymentProvider, PaymentProviderType } from '../../entities/mentor-payment-provider.entity';
 import { AiService } from '../ai/ai.service';
@@ -30,6 +31,7 @@ export class SalesPagesService {
     @InjectRepository(User) private users: Repository<User>,
     @InjectRepository(MentorPaymentProvider) private providers: Repository<MentorPaymentProvider>,
     @InjectRepository(SalesPageAnalyticsEvent) private analytics: Repository<SalesPageAnalyticsEvent>,
+    @InjectRepository(Charge) private charges: Repository<Charge>,
     private ai: AiService,
     private leads: LeadsService,
     private automations: AutomationsService,
@@ -922,6 +924,20 @@ Português do Brasil.`;
 
     const chargeId = charge.id || charge.installment;
 
+    try {
+      const localCharge = this.charges.create({
+        mentorId: mentor.id,
+        description,
+        amount: value,
+        dueDate,
+        status: ChargeStatus.PENDING,
+        method: ChargeMethod.CREDIT_CARD,
+        asaasChargeId: chargeId,
+        metadata: { salesPageId: page.id, productRefId: page.productRefId, leadEmail: dto.email }
+      });
+      await this.charges.save(localCharge);
+    } catch (e:any) { this.logger.warn('persist charge falhou: ' + e?.message); }
+
     // Registra o comprador como Lead no sistema (com origem = sales_page:<slug>).
     // Isso alimenta o CRM do mentor e dispara automações do tipo `lead_created`.
     let createdLeadId: string | null = null;
@@ -943,6 +959,7 @@ Português do Brasil.`;
         },
       });
       createdLeadId = lead.id;
+      try { const lc = await this.charges.findOne({ where: { asaasChargeId: chargeId } }); if (lc) { lc.leadId = lead.id; await this.charges.save(lc); } } catch {}
       await this.analytics.save(this.analytics.create({ mentorId: mentor.id, salesPageId: page.id, type: SalesPageAnalyticsEventType.LEAD }));
       await this.analytics.save(this.analytics.create({ mentorId: mentor.id, salesPageId: page.id, type: SalesPageAnalyticsEventType.PURCHASE }));
       // Dispara automações configuradas (welcome messages, tarefas, etc.)
@@ -1008,3 +1025,9 @@ Português do Brasil.`;
     };
   }
 }
+
+
+
+
+
+
