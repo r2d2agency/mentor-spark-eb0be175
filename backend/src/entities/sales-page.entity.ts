@@ -337,6 +337,9 @@ export class SalesPage {
   @Column({ type: 'jsonb', default: '[]' })
   coupons: SalesPageCoupon[];
 
+  @Column({ type: 'varchar', nullable: true })
+  importedHtmlUrl?: string;
+
   @Column({ type: 'jsonb', nullable: true })
   importedComposition?: SalesPageImportedComposition;
 

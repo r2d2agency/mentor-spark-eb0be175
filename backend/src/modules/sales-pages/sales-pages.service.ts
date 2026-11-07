@@ -282,7 +282,12 @@ Gere o JSON agora.`;
       .replace(/<(script|style|iframe|object|embed|form|svg|math|template|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
       .replace(/<(script|style|iframe|object|embed|form|svg|math|template|noscript)\b[^>]*\/?>/gi, ' ');
     fs.writeFileSync(path.join(dest, 'index.html'), clean, 'utf-8');
-    return { ok: true, path: dest, publicUrl: `/uploads/sales-pages/${mentorId}/${path.basename(dest)}/index.html` };
+    const page = dto.salesPageId ? await this.pages.findOne({ where: { id: dto.salesPageId, mentorId } }) : null;
+    if (page) {
+      page.importedHtmlUrl = `/uploads/sales-pages/${mentorId}/${path.basename(dest)}/index.html`;
+      await this.pages.save(page);
+    }
+    return { ok: true, path: dest, publicUrl: `/uploads/sales-pages/${mentorId}/${path.basename(dest)}/index.html`, salesPageId: dto.salesPageId || null };
   }
 
   // ==================== Importar referência HTML/JSON ====================

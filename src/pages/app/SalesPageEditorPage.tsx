@@ -1235,6 +1235,11 @@ export default function SalesPageEditorPage() {
                 <div className="font-semibold">Importado com sucesso</div>
                 <div className="text-muted-foreground break-all">URL: {zipResult.publicUrl}</div>
                 {zipResult.publicUrl && <a href={zipResult.publicUrl} target="_blank" rel="noreferrer" className="text-primary underline">Abrir página importada →</a>}
+                {zipResult.publicUrl && (
+                  <div className="mt-2">
+                    <iframe src={zipResult.publicUrl.startsWith("http") ? zipResult.publicUrl : `${API_BASE.replace(/\/api\/?$/, "")}${zipResult.publicUrl}`} className="w-full h-96 border rounded" title="Preview" />
+                  </div>
+                )}
               </div>
             )}
           </Card>

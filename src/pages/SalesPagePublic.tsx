@@ -392,6 +392,17 @@ export default function SalesPagePublic() {
 
   const template = page.template || "classic";
 
+  if (page.importedHtmlUrl) {
+    return (
+      <iframe
+        src={page.importedHtmlUrl.startsWith("http") ? page.importedHtmlUrl : `${API_BASE.replace(/\/api\/?$/, "")}${page.importedHtmlUrl}`}
+        title={page.title || "Página de vendas"}
+        className="w-full h-screen border-0"
+        style={{ width: "100%", height: "100vh", border: "none" }}
+      />
+    );
+  }
+
   if (page.importedComposition?.sections?.length) {
     return <ImportedCompositionLayout mentor={mentor} page={page} sections={page.importedComposition.sections} colors={{ primary: primaryHex, accent: accentHex, bg: bgHex, text: textColor, muted: mutedText, border: borderCol }} onCta={openCheckout} mentorSlug={mentorSlug!} pageSlug={pageSlug!} checkoutOpen={checkoutOpen} setCheckoutOpen={setCheckoutOpen} />;
   }
