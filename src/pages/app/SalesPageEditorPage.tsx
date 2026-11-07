@@ -144,6 +144,7 @@ type SalesPage = {
   countdown?: { enabled?: boolean; endsAt?: string; label?: string; hideWhenExpired?: boolean };
   coupons?: Coupon[];
   importedComposition?: { version: 1; sections: any[]; theme?: any; assets?: string[]; source?: "html" | "json" };
+  importedHtmlUrl?: string | null;
 };
 
 type Provider = { id: string; type: string; label?: string; environment: string; hasApiKey: boolean };

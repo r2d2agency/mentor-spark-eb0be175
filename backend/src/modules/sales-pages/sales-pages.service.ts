@@ -126,6 +126,7 @@ export class SalesPagesService {
       'pain' as any,
       'benefitsSection' as any,
       'importedComposition',
+      'importedHtmlUrl' as any,
     ];
     for (const k of editable) {
       if (dto[k] !== undefined) (p as any)[k] = dto[k];
@@ -262,32 +263,61 @@ Gere o JSON agora.`;
   }
 
   async importZip(mentorId: string, file: any, dto: any) {
+    if (!file?.buffer) throw new BadRequestException('Arquivo ZIP não enviado.');
     const zip = new AdmZip(file.buffer);
-    const dest = path.resolve(process.cwd(), 'uploads', 'sales-pages', mentorId, String(Date.now()));
+    const batch = String(Date.now());
+    const dest = path.resolve(process.cwd(), 'uploads', 'sales-pages', mentorId, batch);
     fs.mkdirSync(dest, { recursive: true });
     let indexHtml = '';
+    let foundIndex = false;
     for (const entry of zip.getEntries()) {
       const target = path.resolve(dest, entry.entryName);
-      if (!target.startsWith(dest)) continue;
+      if (target !== dest && !target.startsWith(dest + path.sep)) continue;
       if (entry.isDirectory) { fs.mkdirSync(target, { recursive: true }); continue; }
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, entry.getData());
-      if (/index\.html$/i.test(entry.entryName)) indexHtml = entry.getData().toString('utf-8');
+      const normalized = entry.entryName.replace(/\\/g, '/');
+      if (/(^|\/)index\.html$/i.test(normalized)) {
+        indexHtml = entry.getData().toString('utf-8');
+        foundIndex = true;
+      }
     }
-    if (!indexHtml) throw new BadRequestException('ZIP sem index.html.');
+    if (!foundIndex || !indexHtml) throw new BadRequestException('ZIP sem index.html na raiz.');
     const m = indexHtml.match(/<script[^>]*data-mentor-checkout=["'][^"']+["'][^>]*>/i);
     if (!m) throw new BadRequestException('Snippet de checkout ausente no index.html.');
-    const cfg = await this.checkoutCode(mentorId, dto.salesPageId || '');
-    const clean = indexHtml.replace(/<script[^>]*data-mentor-checkout=["'][^"']+["'][^>]*>/i, cfg.snippet)
-      .replace(/<(script|style|iframe|object|embed|form|svg|math|template|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
-      .replace(/<(script|style|iframe|object|embed|form|svg|math|template|noscript)\b[^>]*\/?>/gi, ' ');
-    fs.writeFileSync(path.join(dest, 'index.html'), clean, 'utf-8');
-    const page = dto.salesPageId ? await this.pages.findOne({ where: { id: dto.salesPageId, mentorId } }) : null;
+    // Página de vendas vinculada (opcional, mas necessária para checkout + página pública).
+    const page = dto.salesPageId
+      ? await this.pages.findOne({ where: { id: dto.salesPageId, mentorId } })
+      : null;
+    const mentor = await this.users.findOne({ where: { id: mentorId } });
+    const mentorSlug = mentor?.slug || '';
+    // Troca o snippet-marcador por um botão real que abre o checkout da página pública.
+    // Usa href relativo: o HTML importado é servido na mesma origem do frontend
+    // (proxy /uploads no dev e na produção), então o link sempre resolve.
+    const checkoutHref = page && mentorSlug ? `/p/${mentorSlug}/${page.slug}?checkout=1` : '#checkout';
+    const checkoutButton =
+      `<div id="mentor-checkout" style="text-align:center;margin:32px 0;">` +
+      `<a href="${checkoutHref}" ` +
+      `style="display:inline-block;padding:16px 48px;font-size:18px;font-weight:700;color:#fff;` +
+      `background:linear-gradient(135deg,#c9a84c,#e5c86e);border-radius:12px;text-decoration:none;` +
+      `box-shadow:0 8px 24px rgba(201,168,76,.4);" data-mentor-checkout-button="true">QUERO ME INSCREVER AGORA</a></div>`;
+    // Preserva o HTML original na íntegra (CSS, JS e assets). Só substitui o snippet.
+    const html = indexHtml.replace(/<script[^>]*data-mentor-checkout=["'][^"']+["'][^>]*>\s*(<\/script>)?/i, checkoutButton);
+    fs.writeFileSync(path.join(dest, 'index.html'), html, 'utf-8');
+    const publicUrl = `/uploads/sales-pages/${mentorId}/${batch}/index.html`;
     if (page) {
-      page.importedHtmlUrl = `/uploads/sales-pages/${mentorId}/${path.basename(dest)}/index.html`;
+      page.importedHtmlUrl = publicUrl;
       await this.pages.save(page);
     }
-    return { ok: true, path: dest, publicUrl: `/uploads/sales-pages/${mentorId}/${path.basename(dest)}/index.html`, salesPageId: dto.salesPageId || null };
+    return {
+      ok: true,
+      path: dest,
+      publicUrl,
+      importedHtmlUrl: publicUrl,
+      publicPageUrl: page && mentorSlug ? `/p/${mentorSlug}/${page.slug}` : null,
+      salesPageId: dto.salesPageId || null,
+      linked: !!page,
+    };
   }
 
   // ==================== Importar referência HTML/JSON ====================

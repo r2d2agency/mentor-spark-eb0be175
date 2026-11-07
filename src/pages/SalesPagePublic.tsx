@@ -118,6 +118,7 @@ type Payload = {
       hideWhenExpired?: boolean;
     };
     importedComposition?: { version: 1; sections: any[]; theme?: any; assets?: string[]; source?: "html" | "json" };
+    importedHtmlUrl?: string | null;
   };
 };
 
@@ -293,7 +294,11 @@ export default function SalesPagePublic() {
   const { mentorSlug, pageSlug } = useParams();
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  // Abre o checkout automaticamente quando o botão do HTML importado é clicado
+  // (o botão aponta para ?checkout=1).
+  const [checkoutOpen, setCheckoutOpen] = useState(
+    () => new URLSearchParams(window.location.search).get("checkout") === "1",
+  );
 
   useEffect(() => {
     (async () => {
@@ -393,13 +398,21 @@ export default function SalesPagePublic() {
   const template = page.template || "classic";
 
   if (page.importedHtmlUrl) {
+    // Usa origem atual: /uploads é servido pelo backend na mesma origem
+    // (proxy no dev e no nginx em produção).
+    const src = /^https?:\/\//i.test(page.importedHtmlUrl)
+      ? page.importedHtmlUrl
+      : `${window.location.origin}${page.importedHtmlUrl.startsWith("/") ? "" : "/"}${page.importedHtmlUrl}`;
     return (
-      <iframe
-        src={page.importedHtmlUrl.startsWith("http") ? page.importedHtmlUrl : `${API_BASE.replace(/\/api\/?$/, "")}${page.importedHtmlUrl}`}
-        title={page.title || "Página de vendas"}
-        className="w-full h-screen border-0"
-        style={{ width: "100%", height: "100vh", border: "none" }}
-      />
+      <>
+        <iframe
+          src={src}
+          title={page.title || "Página de vendas"}
+          className="w-full border-0"
+          style={{ width: "100%", height: "100vh", border: "none" }}
+        />
+        <CheckoutDialog open={checkoutOpen} onClose={() => setCheckoutOpen(false)} mentorSlug={mentorSlug!} pageSlug={pageSlug!} page={page} />
+      </>
     );
   }
 
